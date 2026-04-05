@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #0f0a1a;
+  color: #e2e0ea;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1230;
+}
+::-webkit-scrollbar-thumb {
+  background: #a78bfa;
+  border-radius: 3px;
+}
+
+/* Glow animation for active table */
+@keyframes table-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(167, 139, 250, 0.5);
+  }
+}
+
+.table-active {
+  animation: table-glow 2s ease-in-out infinite;
+}

@@ -1,0 +1,188 @@
+"""Dialogue engine — have conversations with literature tables."""
+
+from __future__ import annotations
+
+import anthropic
+
+from ..models import (
+    DialogueMessage,
+    DialogueResponse,
+    PositionAnalysis,
+    AlignmentItem,
+    PartyAnalysis,
+    Table,
+)
+import json
+
+TABLE_DIALOGUE_SYSTEM = """You are simulating a scholarly discussion at a table in an academic "party" (学术舞会).
+
+This table is called "{table_name}" and the discussion topic is: {table_topic}
+
+The key debate at this table: {key_debate}
+
+The following scholars/papers are sitting at this table:
+{references_description}
+
+YOUR ROLE:
+- You simulate the perspectives of the papers at this table.
+- When the user shares a viewpoint, different papers should respond from their established positions.
+- Each paper's response should be prefixed with their citation (e.g. "Smith et al. (2023):").
+- Papers can agree, disagree, ask for clarification, or build on the user's point.
+- Keep the tone scholarly but engaging — like a lively academic dinner conversation.
+- Be specific: reference actual findings, methods, or theoretical frameworks from the papers.
+- If the user asks a question, have the most relevant paper(s) answer.
+- Responses should feel like a real multi-party conversation, not a lecture.
+- Keep each paper's response to 2-4 sentences to maintain conversational flow.
+- Respond in the SAME LANGUAGE the user uses (if they write in Chinese, respond in Chinese).
+"""
+
+POSITION_ANALYSIS_SYSTEM = """You are an expert academic positioning analyst. A researcher has been exploring a literature landscape (an academic "party") and wants to understand where their viewpoint fits.
+
+Here is the full party analysis:
+{party_json}
+
+The researcher's viewpoint:
+"{user_viewpoint}"
+
+Analyze where this viewpoint sits in the literature. Return a JSON object:
+
+{{
+  "position_summary": "A clear paragraph explaining where this viewpoint sits in the broader conversation",
+  "alignment": [
+    {{
+      "table_name": "name of the table",
+      "relationship": "aligned | partially aligned | in tension | novel",
+      "explanation": "How the viewpoint relates to this table's discussion"
+    }}
+  ],
+  "gaps_and_opportunities": ["gap1", "gap2"],
+  "suggested_next_readings": ["reading1", "reading2"]
+}}
+
+Respond in the SAME LANGUAGE as the user's viewpoint. Return ONLY valid JSON.
+"""
+
+
+def _build_references_description(table: Table) -> str:
+    parts = []
+    for ref in table.references:
+        parts.append(
+            f"- {ref.authors} ({ref.year or 'n.d.'}): \"{ref.title}\"\n"
+            f"  Stance: {ref.stance}\n"
+            f"  Key argument: {ref.key_argument}\n"
+            f"  Summary: {ref.summary}"
+        )
+    return "\n\n".join(parts)
+
+
+async def chat_at_table(
+    table: Table,
+    user_message: str,
+    history: list[DialogueMessage],
+    api_key: str,
+) -> DialogueResponse:
+    """Have a conversation at a specific table."""
+    system_prompt = TABLE_DIALOGUE_SYSTEM.format(
+        table_name=table.name,
+        table_topic=table.topic,
+        key_debate=table.key_debate,
+        references_description=_build_references_description(table),
+    )
+
+    # Build message history
+    messages = []
+    for msg in history:
+        if msg.role == "user":
+            messages.append({"role": "user", "content": msg.content})
+        else:
+            messages.append({"role": "assistant", "content": msg.content})
+
+    messages.append({"role": "user", "content": user_message})
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        system=system_prompt,
+        messages=messages,
+    )
+
+    response_text = response.content[0].text
+
+    # Parse multi-speaker response into individual messages
+    dialogue_messages = _parse_multi_speaker_response(response_text)
+
+    return DialogueResponse(messages=dialogue_messages)
+
+
+def _parse_multi_speaker_response(text: str) -> list[DialogueMessage]:
+    """Parse a response that may contain multiple speaker turns."""
+    messages = []
+    current_speaker = None
+    current_lines: list[str] = []
+
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
+        # Check if line starts with a citation pattern like "Author et al. (2023):"
+        if ":" in line and ("et al." in line.split(":")[0] or "(" in line.split(":")[0]):
+            # Save previous speaker's message
+            if current_speaker and current_lines:
+                messages.append(DialogueMessage(
+                    role=current_speaker,
+                    content="\n".join(current_lines),
+                ))
+            colon_idx = line.index(":")
+            current_speaker = line[:colon_idx].strip()
+            remaining = line[colon_idx + 1:].strip()
+            current_lines = [remaining] if remaining else []
+        else:
+            current_lines.append(line)
+
+    # Don't forget the last speaker
+    if current_speaker and current_lines:
+        messages.append(DialogueMessage(
+            role=current_speaker,
+            content="\n".join(current_lines),
+        ))
+
+    # Fallback: if parsing didn't work, return as single message
+    if not messages:
+        messages.append(DialogueMessage(
+            role="table",
+            content=text,
+        ))
+
+    return messages
+
+
+async def analyze_position(
+    party: PartyAnalysis,
+    user_viewpoint: str,
+    api_key: str,
+) -> PositionAnalysis:
+    """Analyze where the user's viewpoint sits in the literature."""
+    party_json = party.model_dump_json(indent=2)
+
+    prompt = POSITION_ANALYSIS_SYSTEM.format(
+        party_json=party_json,
+        user_viewpoint=user_viewpoint,
+    )
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    data = json.loads(response.content[0].text)
+
+    return PositionAnalysis(
+        position_summary=data["position_summary"],
+        alignment=[AlignmentItem(**a) for a in data["alignment"]],
+        gaps_and_opportunities=data["gaps_and_opportunities"],
+        suggested_next_readings=data["suggested_next_readings"],
+    )
