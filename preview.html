@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Party — Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f0a1a;
+      color: #e2e0ea;
+      min-height: 100vh;
+    }
+    .header {
+      border-bottom: 1px solid #1a1230;
+      padding: 16px 24px;
+    }
+    .header-inner {
+      max-width: 1152px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { font-size: 20px; font-weight: 700; color: #a78bfa; cursor: pointer; }
+    .nav-btn {
+      border: none; background: none; color: #8b85a0; font-size: 14px;
+      padding: 6px 12px; border-radius: 8px; cursor: pointer; font-family: inherit;
+    }
+    .nav-btn:hover { color: white; }
+    .nav-btn.active { background: #a78bfa; color: white; }
+    .main { max-width: 1152px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Page navigation */
+    .page-tabs { display: flex; gap: 8px; margin-bottom: 32px; justify-content: center; }
+    .page-tab {
+      padding: 10px 24px; border-radius: 12px; border: 2px solid #a78bfa33;
+      background: #1a123066; color: #8b85a0; cursor: pointer; font-family: inherit;
+      font-size: 14px; font-weight: 500; transition: all 0.2s;
+    }
+    .page-tab:hover { border-color: #a78bfa66; color: white; }
+    .page-tab.active { background: #a78bfa; color: white; border-color: #a78bfa; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Upload page */
+    .upload-center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; }
+    .title-main { font-size: 48px; font-weight: 700; margin-bottom: 12px; letter-spacing: -1px; }
+    .title-accent { color: #a78bfa; }
+    .title-gold { color: #fbbf24; }
+    .subtitle { font-size: 18px; color: #8b85a0; margin-bottom: 48px; }
+    .upload-box {
+      width: 100%; max-width: 512px; border: 2px dashed #8b85a04d;
+      border-radius: 16px; padding: 48px; text-align: center;
+      background: #1a123080; cursor: pointer; transition: all 0.2s;
+    }
+    .upload-box:hover { border-color: #a78bfa80; background: #1a1230; }
+    .upload-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+    .upload-text { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+    .upload-hint { font-size: 14px; color: #8b85a0; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; max-width: 768px; margin-top: 64px; text-align: center; }
+    .step { background: #1a12304d; border-radius: 12px; padding: 24px; }
+    .step-icon { font-size: 30px; margin-bottom: 8px; }
+    .step-title { font-weight: 600; color: #a78bfa; margin-bottom: 4px; }
+    .step-desc { font-size: 14px; color: #8b85a0; }
+
+    /* Party page */
+    .party-header {
+      background: linear-gradient(135deg, #1a1230, #0f0a1a);
+      border: 1px solid #a78bfa33; border-radius: 16px; padding: 32px; margin-bottom: 40px;
+    }
+    .label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; color: #fbbf24; margin-bottom: 4px; }
+    .party-question { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+    .party-desc { color: #8b85a0; margin-bottom: 16px; line-height: 1.6; }
+    .keywords { display: flex; flex-wrap: wrap; gap: 8px; }
+    .keyword { background: #a78bfa26; color: #a78bfa; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+
+    .contribution {
+      background: #1a123080; border: 1px solid #a78bfa1a; border-radius: 12px;
+      padding: 24px; margin-bottom: 32px;
+    }
+    .contrib-label { font-size: 14px; font-weight: 500; color: #f97316; margin-bottom: 4px; }
+    .contrib-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .contrib-text { color: #8b85a0; line-height: 1.6; }
+
+    .tables-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .tables-title { font-size: 18px; font-weight: 600; }
+    .tables-hint { font-size: 14px; color: #8b85a0; }
+    .tables-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    @media (max-width: 768px) { .tables-grid { grid-template-columns: 1fr; } }
+
+    .table-card {
+      border: 1px solid #a78bfa1a; background: #1a123099; border-radius: 16px;
+      padding: 24px; cursor: pointer; transition: all 0.2s; text-align: left;
+    }
+    .table-card:hover { border-color: #a78bfa66; background: #1a1230; box-shadow: 0 8px 32px #a78bfa1a; }
+    .table-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .table-name { font-size: 18px; font-weight: 600; color: #a78bfa; }
+    .table-count { background: #a78bfa1a; color: #8b85a0; padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+    .table-topic { font-size: 14px; color: #e2e0ea; margin-bottom: 12px; }
+    .debate-box { background: #0f0a1a80; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+    .debate-label { font-size: 12px; font-weight: 500; color: #fbbf24; margin-bottom: 4px; }
+    .debate-text { font-size: 14px; color: #8b85a0; }
+    .ref-item { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; margin-bottom: 8px; }
+    .ref-dot-green { color: #4ade80; }
+    .ref-dot-red { color: #f87171; }
+    .ref-dot-blue { color: #60a5fa; }
+    .ref-dot-gold { color: #fbbf24; }
+    .ref-author { color: #e2e0ea; }
+    .ref-year { color: #8b85a0; }
+    .join-hint { font-size: 12px; color: #a78bfa; margin-top: 16px; opacity: 0; transition: opacity 0.2s; }
+    .table-card:hover .join-hint { opacity: 1; }
+
+    /* Table dialogue page */
+    .back-btn { font-size: 14px; color: #8b85a0; cursor: pointer; margin-bottom: 8px; background: none; border: none; font-family: inherit; }
+    .back-btn:hover { color: #a78bfa; }
+    .table-header-name { font-size: 20px; font-weight: 700; color: #a78bfa; }
+    .table-header-topic { font-size: 14px; color: #8b85a0; margin-bottom: 16px; }
+    .dialogue-layout { display: flex; gap: 16px; height: 500px; }
+    .sidebar {
+      width: 256px; flex-shrink: 0; overflow-y: auto; background: #1a123080;
+      border: 1px solid #a78bfa1a; border-radius: 12px; padding: 16px;
+    }
+    .sidebar-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; color: #fbbf24; margin-bottom: 12px; }
+    .sidebar-ref { background: #0f0a1a80; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .sidebar-ref-author { font-size: 14px; font-weight: 500; }
+    .sidebar-ref-year { font-size: 12px; color: #8b85a0; }
+    .sidebar-ref-arg { font-size: 12px; color: #8b85a0; font-style: italic; margin-top: 4px; }
+    .sidebar-debate { background: #a78bfa1a; border-radius: 8px; padding: 12px; margin-top: 16px; }
+    .sidebar-debate-label { font-size: 12px; font-weight: 500; color: #a78bfa; }
+    .sidebar-debate-text { font-size: 12px; color: #8b85a0; margin-top: 4px; }
+
+    .chat-area {
+      flex: 1; display: flex; flex-direction: column; background: #1a12304d;
+      border: 1px solid #a78bfa1a; border-radius: 12px; overflow: hidden;
+    }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; }
+    .msg { display: flex; margin-bottom: 16px; }
+    .msg-right { justify-content: flex-end; }
+    .msg-left { justify-content: flex-start; }
+    .msg-bubble {
+      max-width: 80%; border-radius: 16px; padding: 12px 16px; font-size: 14px; line-height: 1.6;
+    }
+    .msg-user { background: #a78bfa; color: white; }
+    .msg-paper { background: #1a1230; border: 1px solid #a78bfa1a; }
+    .msg-speaker { font-size: 12px; font-weight: 600; color: #fbbf24; margin-bottom: 4px; }
+    .chat-input-area { border-top: 1px solid #a78bfa1a; padding: 16px; display: flex; gap: 12px; }
+    .chat-input {
+      flex: 1; background: #0f0a1a; border: 1px solid #a78bfa33; border-radius: 12px;
+      padding: 12px 16px; color: #e2e0ea; font-size: 14px; font-family: inherit; outline: none;
+    }
+    .chat-input:focus { border-color: #a78bfa; }
+    .chat-input::placeholder { color: #8b85a080; }
+    .send-btn {
+      background: #a78bfa; color: white; border: none; border-radius: 12px;
+      padding: 12px 24px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
+    }
+    .send-btn:hover { background: #9577e6; }
+
+    /* Position page */
+    .position-input {
+      width: 100%; background: #1a1230; border: 1px solid #a78bfa33; border-radius: 12px;
+      padding: 16px; color: #e2e0ea; font-size: 14px; font-family: inherit; outline: none;
+      min-height: 120px; resize: vertical;
+    }
+    .position-input:focus { border-color: #a78bfa; }
+    .position-input::placeholder { color: #8b85a066; }
+    .map-btn {
+      background: #a78bfa; color: white; border: none; border-radius: 12px;
+      padding: 12px 24px; font-size: 14px; font-weight: 500; cursor: pointer;
+      margin-top: 12px; font-family: inherit;
+    }
+    .position-result { margin-top: 32px; }
+    .position-summary {
+      background: linear-gradient(135deg, #1a1230, #0f0a1a);
+      border: 1px solid #a78bfa33; border-radius: 16px; padding: 24px; margin-bottom: 24px;
+    }
+    .position-summary-text { color: #e2e0ea; line-height: 1.7; }
+    .alignment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+    .align-card { border-radius: 12px; border: 1px solid; padding: 16px; }
+    .align-green { background: #4ade8026; color: #4ade80; border-color: #4ade804d; }
+    .align-blue { background: #60a5fa26; color: #60a5fa; border-color: #60a5fa4d; }
+    .align-red { background: #f8717126; color: #f87171; border-color: #f871714d; }
+    .align-gold { background: #fbbf2426; color: #fbbf24; border-color: #fbbf244d; }
+    .align-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .align-name { font-weight: 600; }
+    .align-badge { background: #ffffff1a; padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+    .align-text { font-size: 14px; opacity: 0.8; }
+    .info-box {
+      background: #1a123080; border: 1px solid #a78bfa1a; border-radius: 12px; padding: 24px; margin-bottom: 24px;
+    }
+    .info-title-warm { font-size: 18px; font-weight: 600; color: #f97316; margin-bottom: 12px; }
+    .info-title-accent { font-size: 18px; font-weight: 600; color: #a78bfa; margin-bottom: 12px; }
+    .info-item { display: flex; gap: 8px; font-size: 14px; color: #8b85a0; margin-bottom: 8px; }
+    .arrow-warm { color: #f97316; }
+    .arrow-accent { color: #a78bfa; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="logo">Paper Party</div>
+      <div style="display:flex;gap:8px;">
+        <button class="nav-btn active" onclick="showPage('upload')">Upload</button>
+        <button class="nav-btn" onclick="showPage('party')">Party Overview</button>
+        <button class="nav-btn" onclick="showPage('table')">Table Dialogue</button>
+        <button class="nav-btn" onclick="showPage('position')">My Position</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ============ PAGE 1: Upload ============ -->
+    <div id="page-upload" class="page active">
+      <div class="upload-center">
+        <div style="text-align:center; margin-bottom:48px;">
+          <div class="title-main">
+            <span class="title-accent">Paper</span> <span class="title-gold">Party</span>
+          </div>
+          <div class="subtitle">Upload a paper. Discover the conversations. Join the table.</div>
+        </div>
+        <div class="upload-box">
+          <div class="upload-icon">&#128196;</div>
+          <div class="upload-text">Drop your paper here</div>
+          <div class="upload-hint">or click to browse (PDF)</div>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-icon">&#128196;</div>
+            <div class="step-title">Upload</div>
+            <div class="step-desc">Drop a research paper (PDF)</div>
+          </div>
+          <div class="step">
+            <div class="step-icon">&#128269;</div>
+            <div class="step-title">Discover</div>
+            <div class="step-desc">AI maps the literature landscape</div>
+          </div>
+          <div class="step">
+            <div class="step-icon">&#128172;</div>
+            <div class="step-title">Dialogue</div>
+            <div class="step-desc">Join tables and debate with the literature</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PAGE 2: Party Overview ============ -->
+    <div id="page-party" class="page">
+      <div class="party-header">
+        <div class="label">The Party Theme</div>
+        <div class="party-question">How can large language models be effectively aligned with human values while maintaining their general capabilities?</div>
+        <div class="party-desc">This question sits at the intersection of AI safety, natural language processing, and ethics. As LLMs become more powerful and widely deployed, ensuring they behave in accordance with human intentions becomes increasingly critical.</div>
+        <div class="keywords">
+          <span class="keyword">AI alignment</span>
+          <span class="keyword">RLHF</span>
+          <span class="keyword">value learning</span>
+          <span class="keyword">constitutional AI</span>
+          <span class="keyword">reward modeling</span>
+        </div>
+      </div>
+
+      <div class="contribution">
+        <div class="contrib-label">Your Paper's Contribution</div>
+        <div class="contrib-title">Constitutional AI: Harmlessness from AI Feedback</div>
+        <div class="contrib-text">This paper proposes a novel approach to alignment that uses AI-generated feedback based on a set of principles (a "constitution") to train models, reducing reliance on human feedback while improving harmlessness.</div>
+      </div>
+
+      <div class="tables-header">
+        <div class="tables-title">Discussion Tables (4)</div>
+        <div class="tables-hint">Click a table to join the conversation</div>
+      </div>
+
+      <div class="tables-grid">
+        <!-- Table 1 -->
+        <div class="table-card" onclick="showPage('table')">
+          <div class="table-top">
+            <div class="table-name">The RLHF Debate</div>
+            <div class="table-count">4 papers</div>
+          </div>
+          <div class="table-topic">Is reinforcement learning from human feedback sufficient for robust alignment?</div>
+          <div class="debate-box">
+            <div class="debate-label">Key Debate</div>
+            <div class="debate-text">Whether RLHF can scale beyond simple preference learning or fundamentally fails to capture the complexity of human values</div>
+          </div>
+          <div class="ref-item"><span class="ref-dot-green">&#9679;</span> <span class="ref-author">Ouyang et al.</span> <span class="ref-year">(2022)</span></div>
+          <div class="ref-item"><span class="ref-dot-red">&#9650;</span> <span class="ref-author">Casper et al.</span> <span class="ref-year">(2023)</span></div>
+          <div class="ref-item"><span class="ref-dot-blue">&#9670;</span> <span class="ref-author">Christiano et al.</span> <span class="ref-year">(2017)</span></div>
+          <div class="join-hint">Join this table &rarr;</div>
+        </div>
+
+        <!-- Table 2 -->
+        <div class="table-card">
+          <div class="table-top">
+            <div class="table-name">Scalable Oversight</div>
+            <div class="table-count">3 papers</div>
+          </div>
+          <div class="table-topic">How can we supervise AI systems that exceed human-level capabilities in specific domains?</div>
+          <div class="debate-box">
+            <div class="debate-label">Key Debate</div>
+            <div class="debate-text">Whether AI-assisted evaluation can replace human oversight without introducing systematic blind spots</div>
+          </div>
+          <div class="ref-item"><span class="ref-dot-green">&#9679;</span> <span class="ref-author">Bowman et al.</span> <span class="ref-year">(2022)</span></div>
+          <div class="ref-item"><span class="ref-dot-gold">&#9733;</span> <span class="ref-author">Irving et al.</span> <span class="ref-year">(2018)</span></div>
+          <div class="ref-item"><span class="ref-dot-blue">&#9670;</span> <span class="ref-author">Leike et al.</span> <span class="ref-year">(2018)</span></div>
+          <div class="join-hint">Join this table &rarr;</div>
+        </div>
+
+        <!-- Table 3 -->
+        <div class="table-card">
+          <div class="table-top">
+            <div class="table-name">The Safety Tax</div>
+            <div class="table-count">3 papers</div>
+          </div>
+          <div class="table-topic">Does making models safer inevitably reduce their usefulness and capabilities?</div>
+          <div class="debate-box">
+            <div class="debate-label">Key Debate</div>
+            <div class="debate-text">The tension between harmlessness and helpfulness — whether alignment necessarily trades off against capability</div>
+          </div>
+          <div class="ref-item"><span class="ref-dot-red">&#9650;</span> <span class="ref-author">Askell et al.</span> <span class="ref-year">(2021)</span></div>
+          <div class="ref-item"><span class="ref-dot-green">&#9679;</span> <span class="ref-author">Bai et al.</span> <span class="ref-year">(2022)</span></div>
+          <div class="ref-item"><span class="ref-dot-blue">&#9670;</span> <span class="ref-author">Ganguli et al.</span> <span class="ref-year">(2022)</span></div>
+          <div class="join-hint">Join this table &rarr;</div>
+        </div>
+
+        <!-- Table 4 -->
+        <div class="table-card">
+          <div class="table-top">
+            <div class="table-name">Value Pluralism</div>
+            <div class="table-count">3 papers</div>
+          </div>
+          <div class="table-topic">Whose values should AI be aligned with, and how do we handle conflicting cultural norms?</div>
+          <div class="debate-box">
+            <div class="debate-label">Key Debate</div>
+            <div class="debate-text">Whether a single alignment target is coherent given deep moral disagreements across cultures and individuals</div>
+          </div>
+          <div class="ref-item"><span class="ref-dot-gold">&#9733;</span> <span class="ref-author">Gabriel (2020)</span></div>
+          <div class="ref-item"><span class="ref-dot-red">&#9650;</span> <span class="ref-author">Sorensen et al.</span> <span class="ref-year">(2024)</span></div>
+          <div class="ref-item"><span class="ref-dot-blue">&#9670;</span> <span class="ref-author">Kirk et al.</span> <span class="ref-year">(2024)</span></div>
+          <div class="join-hint">Join this table &rarr;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PAGE 3: Table Dialogue ============ -->
+    <div id="page-table" class="page">
+      <button class="back-btn" onclick="showPage('party')">&larr; Back to party</button>
+      <div class="table-header-name">The RLHF Debate</div>
+      <div class="table-header-topic">Is reinforcement learning from human feedback sufficient for robust alignment?</div>
+
+      <div class="dialogue-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-label">At this table</div>
+          <div class="sidebar-ref">
+            <div class="sidebar-ref-author">Ouyang et al.</div>
+            <div class="sidebar-ref-year">(2022)</div>
+            <div class="sidebar-ref-arg">"RLHF can produce models that follow instructions more faithfully than base models"</div>
+          </div>
+          <div class="sidebar-ref">
+            <div class="sidebar-ref-author">Casper et al.</div>
+            <div class="sidebar-ref-year">(2023)</div>
+            <div class="sidebar-ref-arg">"RLHF has fundamental limitations including reward hacking and distributional shift"</div>
+          </div>
+          <div class="sidebar-ref">
+            <div class="sidebar-ref-author">Christiano et al.</div>
+            <div class="sidebar-ref-year">(2017)</div>
+            <div class="sidebar-ref-arg">"Human preferences can serve as a training signal for complex behaviors"</div>
+          </div>
+          <div class="sidebar-debate">
+            <div class="sidebar-debate-label">Key Debate</div>
+            <div class="sidebar-debate-text">Whether RLHF can scale beyond simple preference learning or fundamentally fails to capture the complexity of human values</div>
+          </div>
+        </div>
+
+        <!-- Chat -->
+        <div class="chat-area">
+          <div class="chat-messages">
+            <!-- User message -->
+            <div class="msg msg-right">
+              <div class="msg-bubble msg-user">I think RLHF alone is not enough for alignment. We need additional mechanisms like constitutional principles to guide the model's behavior.</div>
+            </div>
+            <!-- Paper responses -->
+            <div class="msg msg-left">
+              <div class="msg-bubble msg-paper">
+                <div class="msg-speaker">Ouyang et al. (2022)</div>
+                We agree that RLHF has limitations, but our InstructGPT results show it significantly improves model behavior. Perhaps the question isn't whether RLHF is "enough" alone, but how it can be combined with other techniques. Your constitutional approach could be a valuable complement.
+              </div>
+            </div>
+            <div class="msg msg-left">
+              <div class="msg-bubble msg-paper">
+                <div class="msg-speaker">Casper et al. (2023)</div>
+                We'd strongly agree. Our survey identifies at least 12 fundamental challenges with RLHF, including reward hacking, inconsistent human preferences, and the difficulty of expressing complex values through pairwise comparisons. Constitutional principles could address the specification problem we highlight.
+              </div>
+            </div>
+            <div class="msg msg-left">
+              <div class="msg-bubble msg-paper">
+                <div class="msg-speaker">Christiano et al. (2017)</div>
+                Interesting perspective. While our original framework focused on learning from human preferences, we always envisioned this as one component of a larger alignment strategy. How do you ensure the constitutional principles themselves are well-specified?
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <input class="chat-input" placeholder="Share your thoughts or ask a question..." />
+            <button class="send-btn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PAGE 4: My Position ============ -->
+    <div id="page-position" class="page">
+      <button class="back-btn" onclick="showPage('party')">&larr; Back to party</button>
+      <h2 style="font-size:24px;font-weight:700;margin-bottom:8px;">Find Your Position</h2>
+      <p style="color:#8b85a0;margin-bottom:24px;">Share your viewpoint or research idea, and we'll map where it sits in the literature landscape.</p>
+
+      <textarea class="position-input" placeholder="Describe your viewpoint, research idea, or argument...">I believe that AI alignment should move beyond human feedback entirely and instead rely on formally verified principles derived from moral philosophy, combined with mechanistic interpretability to ensure the model's internal reasoning matches its outputs.</textarea>
+      <button class="map-btn">Map My Position</button>
+
+      <div class="position-result">
+        <div class="position-summary">
+          <div class="label">Your Position in the Literature</div>
+          <div class="position-summary-text">Your viewpoint represents a <strong>novel synthesis</strong> that bridges the Scalable Oversight and Value Pluralism tables while challenging the fundamental premises of the RLHF Debate table. By advocating for formally verified principles, you move beyond the empirical RLHF paradigm toward a more rigorous foundation. Your emphasis on mechanistic interpretability adds a unique dimension that most alignment papers in this landscape do not deeply engage with.</div>
+        </div>
+
+        <h3 style="font-size:18px;font-weight:600;margin-bottom:16px;">Relationship to Each Table</h3>
+        <div class="alignment-grid">
+          <div class="align-card align-red">
+            <div class="align-top">
+              <div class="align-name">The RLHF Debate</div>
+              <span class="align-badge">in tension</span>
+            </div>
+            <div class="align-text">Your proposal to move "beyond human feedback entirely" directly challenges the foundational premise of this table. Casper et al. would partially support your critique, but Ouyang et al. would argue RLHF remains a practical necessity.</div>
+          </div>
+          <div class="align-card align-blue">
+            <div class="align-top">
+              <div class="align-name">Scalable Oversight</div>
+              <span class="align-badge">partially aligned</span>
+            </div>
+            <div class="align-text">Your emphasis on formal verification resonates with this table's concern about supervising superhuman systems. However, this table focuses on AI-assisted oversight rather than formal methods.</div>
+          </div>
+          <div class="align-card align-gold">
+            <div class="align-top">
+              <div class="align-name">The Safety Tax</div>
+              <span class="align-badge">novel</span>
+            </div>
+            <div class="align-text">Your approach via mechanistic interpretability could potentially resolve the safety-capability tradeoff by ensuring alignment at the representation level rather than through behavioral constraints.</div>
+          </div>
+          <div class="align-card align-green">
+            <div class="align-top">
+              <div class="align-name">Value Pluralism</div>
+              <span class="align-badge">aligned</span>
+            </div>
+            <div class="align-text">Your call for principles from moral philosophy directly engages with this table's core concern. Gabriel (2020) would find your approach promising as a framework for navigating value disagreements.</div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-title-warm">Gaps & Opportunities</div>
+          <div class="info-item"><span class="arrow-warm">&rarr;</span> No existing work combines formal verification with mechanistic interpretability for alignment — this is a clear research gap</div>
+          <div class="info-item"><span class="arrow-warm">&rarr;</span> The bridge between moral philosophy and formal specification remains underexplored</div>
+          <div class="info-item"><span class="arrow-warm">&rarr;</span> Practical scalability of formal verification to large models is an open challenge</div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-title-accent">Suggested Next Readings</div>
+          <div class="info-item"><span class="arrow-accent">&#128214;</span> Olah et al. (2020) "Zoom In: An Introduction to Circuits" — foundational interpretability work</div>
+          <div class="info-item"><span class="arrow-accent">&#128214;</span> Tegmark & Omohundro (2023) "Provably Safe Systems" — formal verification for AI safety</div>
+          <div class="info-item"><span class="arrow-accent">&#128214;</span> Gabriel (2020) "Artificial Intelligence, Values, and Alignment" — moral philosophy frameworks</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        if (b.textContent.toLowerCase().includes(name) ||
+            (name === 'upload' && b.textContent === 'Upload') ||
+            (name === 'party' && b.textContent === 'Party Overview') ||
+            (name === 'table' && b.textContent === 'Table Dialogue') ||
+            (name === 'position' && b.textContent === 'My Position')) {
+          b.classList.add('active');
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
