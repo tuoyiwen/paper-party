@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import fitz  # PyMuPDF
+import pdfplumber
 
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> dict:
@@ -10,19 +10,23 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> dict:
 
     Returns a dict with keys: title, abstract, full_text.
     """
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    import io
+
+    pdf_file = io.BytesIO(pdf_bytes)
+    pdf = pdfplumber.open(pdf_file)
 
     full_text_parts: list[str] = []
-    for page in doc:
-        full_text_parts.append(page.get_text())
+    for page in pdf.pages:
+        text = page.extract_text()
+        if text:
+            full_text_parts.append(text)
 
     full_text = "\n".join(full_text_parts)
 
-    # Heuristic title extraction: first non-empty line, usually largest font
-    title = _extract_title(doc)
+    title = _extract_title(pdf)
     abstract = _extract_abstract(full_text)
 
-    doc.close()
+    pdf.close()
     return {
         "title": title,
         "abstract": abstract,
@@ -30,27 +34,31 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> dict:
     }
 
 
-def _extract_title(doc: fitz.Document) -> str:
+def _extract_title(pdf: pdfplumber.PDF) -> str:
     """Extract title from first page using font size heuristic."""
-    if len(doc) == 0:
+    if len(pdf.pages) == 0:
         return "Untitled"
 
-    first_page = doc[0]
-    blocks = first_page.get_text("dict")["blocks"]
+    first_page = pdf.pages[0]
+    words = first_page.extract_words(extra_attrs=["size"])
 
-    max_size = 0
-    title_text = ""
+    if not words:
+        # Fallback: first line of text
+        text = first_page.extract_text()
+        if text:
+            return text.split("\n")[0].strip()
+        return "Untitled"
 
-    for block in blocks:
-        if "lines" not in block:
-            continue
-        for line in block["lines"]:
-            for span in line["spans"]:
-                if span["size"] > max_size and span["text"].strip():
-                    max_size = span["size"]
-                    title_text = span["text"].strip()
+    # Find the largest font size
+    max_size = max(float(w.get("size", 0)) for w in words)
 
-    return title_text or "Untitled"
+    # Collect words with the largest font size (likely the title)
+    title_words = [
+        w["text"] for w in words
+        if abs(float(w.get("size", 0)) - max_size) < 1.0
+    ]
+
+    return " ".join(title_words).strip() or "Untitled"
 
 
 def _extract_abstract(full_text: str) -> str:
