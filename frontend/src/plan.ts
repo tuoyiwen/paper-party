@@ -12,7 +12,7 @@ const PACK_KEY = "paper-party-pack-credits";
 // Limits
 const FREE_UPLOADS_PER_MONTH = 1;
 const FREE_DIALOGUE_ROUNDS = 3;
-const PACK_PAPERS = 3;
+const PACK_PAPERS = 5;
 
 interface Usage {
   uploads_this_month: number;

@@ -74,10 +74,10 @@ export default function Pricing({ currentPlan, onSelectPlan, onBack }: Props) {
           <div className="mb-6">
             <h3 className="text-xl font-bold text-blue-400">Paper Pack</h3>
             <p className="mt-1 text-3xl font-bold">
-              $5.99
+              $7.99
             </p>
             <p className="mt-1 text-xs text-party-muted">
-              one-time / 3 papers
+              one-time / 5 papers
             </p>
             <p className="mt-2 text-sm text-party-muted">
               Pay as you go, no subscription
@@ -98,7 +98,7 @@ export default function Pricing({ currentPlan, onSelectPlan, onBack }: Props) {
           )}
 
           <ul className="space-y-3 text-sm">
-            <PlanFeature included label="3 papers (never expires)" highlight />
+            <PlanFeature included label="5 papers (never expires)" highlight />
             <PlanFeature included label="Party Overview" />
             <PlanFeature included label="Unlimited dialogue" highlight />
             <PlanFeature included label="Export raw chat" />
