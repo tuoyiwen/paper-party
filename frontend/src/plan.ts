@@ -19,7 +19,8 @@ function currentMonth(): string {
 }
 
 export function getPlan(): Plan {
-  return (localStorage.getItem(PLAN_KEY) as Plan) || "free";
+  // Default to "pro" during testing; change to "free" for production
+  return (localStorage.getItem(PLAN_KEY) as Plan) || "pro";
 }
 
 export function setPlan(plan: Plan) {

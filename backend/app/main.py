@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, HTTPException
@@ -45,8 +47,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory store (replace with DB for production)
+# File-based persistence for party data
+DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
+PARTIES_FILE = DATA_DIR / "parties.json"
+
 parties: dict[str, PartyAnalysis] = {}
+
+
+def _load_parties():
+    """Load parties from disk on startup."""
+    global parties
+    if PARTIES_FILE.exists():
+        try:
+            raw = json.loads(PARTIES_FILE.read_text(encoding="utf-8"))
+            parties = {k: PartyAnalysis(**v) for k, v in raw.items()}
+        except Exception:
+            parties = {}
+
+
+def _save_parties():
+    """Save parties to disk."""
+    raw = {k: json.loads(v.model_dump_json()) for k, v in parties.items()}
+    PARTIES_FILE.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+_load_parties()
 
 
 def _get_api_key() -> str:
@@ -96,9 +122,10 @@ async def upload_paper(file: UploadFile):
         s2_api_key=s2_api_key,
     )
 
-    # Store for later dialogue
+    # Store for later dialogue (persist to disk)
     party_id = f"party-{uuid.uuid4().hex[:8]}"
     parties[party_id] = party
+    _save_parties()
 
     return party
 
