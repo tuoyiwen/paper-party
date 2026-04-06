@@ -8,7 +8,7 @@ import uuid
 import anthropic
 
 from ..models import LiteratureReference, PartyAnalysis, ResearchQuestion, Table
-from .semantic_scholar import enrich_references
+from .semantic_scholar import enrich_references, search_top_tier_papers
 
 ANALYSIS_PROMPT = """You are an expert academic research analyst. You are helping a researcher understand the "conversation" happening in the academic literature around a paper they uploaded.
 
@@ -107,6 +107,45 @@ async def analyze_paper(
         if s2_api_key:
             ref_dicts = await enrich_references(ref_dicts, s2_api_key)
 
+            # Replace non-top-tier refs with top-tier papers on the same topic
+            top_tier_refs = [r for r in ref_dicts if r.get("is_top_tier")]
+            non_top_tier = [r for r in ref_dicts if not r.get("is_top_tier")]
+
+            if non_top_tier:
+                # Search for top-tier replacements for this table's topic
+                replacements = await search_top_tier_papers(
+                    t["topic"], s2_api_key, max_results=len(non_top_tier)
+                )
+                for repl in replacements:
+                    authors = repl.get("authors", [])
+                    author_names = [a.get("name", "") for a in authors[:3]]
+                    author_str = ", ".join(author_names)
+                    if len(authors) > 3:
+                        author_str += " et al."
+
+                    tldr_text = ""
+                    if repl.get("tldr") and repl["tldr"].get("text"):
+                        tldr_text = repl["tldr"]["text"]
+
+                    top_tier_refs.append({
+                        "title": repl.get("title", ""),
+                        "authors": author_str,
+                        "authors_full": author_str,
+                        "year": repl.get("year"),
+                        "key_argument": tldr_text or repl.get("abstract", "")[:200],
+                        "stance": "extends",
+                        "summary": repl.get("abstract", "")[:300] if repl.get("abstract") else "",
+                        "abstract": repl.get("abstract", ""),
+                        "citation_count": repl.get("citationCount", 0),
+                        "url": repl.get("url", ""),
+                        "s2_id": repl.get("paperId", ""),
+                        "tldr": tldr_text,
+                        "journal": repl.get("_journal", ""),
+                        "is_top_tier": True,
+                    })
+
+                ref_dicts = top_tier_refs
+
         refs = [
             LiteratureReference(
                 title=r.get("title", ""),
@@ -121,6 +160,8 @@ async def analyze_paper(
                 s2_id=r.get("s2_id"),
                 authors_full=r.get("authors_full"),
                 tldr=r.get("tldr"),
+                journal=r.get("journal"),
+                is_top_tier=r.get("is_top_tier"),
             )
             for r in ref_dicts
         ]

@@ -17,6 +17,8 @@ export interface LiteratureReference {
   s2_id: string | null;
   authors_full: string | null;
   tldr: string | null;
+  journal: string | null;
+  is_top_tier: boolean | null;
 }
 
 export interface Table {

@@ -77,6 +77,9 @@ export default function TableDialogue({ table, onBack }: Props) {
                 {ref.year && (
                   <p className="text-xs text-party-muted">({ref.year})</p>
                 )}
+                {ref.journal && (
+                  <p className="text-xs text-green-400/70">{ref.journal}</p>
+                )}
                 {ref.citation_count != null && (
                   <p className="text-xs text-party-accent/50">{ref.citation_count} citations</p>
                 )}

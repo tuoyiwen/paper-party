@@ -125,8 +125,8 @@ export default function PartyView({ party, onJoinTable }: Props) {
                         [{ref.citation_count} cited]
                       </span>
                     )}
-                    {ref.url && (
-                      <span className="ml-1 text-green-400/60" title="Verified on Semantic Scholar">
+                    {ref.is_top_tier && (
+                      <span className="ml-1 text-green-400" title={ref.journal || "Top-tier journal"}>
                         ✓
                       </span>
                     )}

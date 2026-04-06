@@ -36,6 +36,8 @@ class LiteratureReference(BaseModel):
     s2_id: str | None = None
     authors_full: str | None = None
     tldr: str | None = None
+    journal: str | None = None
+    is_top_tier: bool | None = None
 
 
 class Table(BaseModel):
