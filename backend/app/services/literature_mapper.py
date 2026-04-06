@@ -3,12 +3,49 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 
 import anthropic
 
 from ..models import LiteratureReference, PartyAnalysis, ResearchQuestion, Table
 from .semantic_scholar import enrich_references, search_top_tier_papers
+
+
+def _extract_json(text: str) -> dict:
+    """Extract JSON from a response that may contain markdown fences or extra text."""
+    # Try direct parse first
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Try removing markdown code fences
+    match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+
+    # Try finding the first { ... } block
+    start = text.find("{")
+    if start != -1:
+        # Find matching closing brace
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except json.JSONDecodeError:
+                        break
+
+    raise ValueError(f"Could not extract valid JSON from response: {text[:200]}...")
 
 ANALYSIS_PROMPT = """You are an expert academic research analyst. You are helping a researcher understand the "conversation" happening in the academic literature around a paper they uploaded.
 
@@ -95,8 +132,8 @@ async def analyze_paper(
 
     response_text = message.content[0].text
 
-    # Parse JSON from response
-    data = json.loads(response_text)
+    # Parse JSON from response — handle markdown fences and extra text
+    data = _extract_json(response_text)
 
     # Build structured result
     tables = []
