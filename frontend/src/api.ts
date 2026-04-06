@@ -63,3 +63,27 @@ export async function analyzePosition(
 
   return res.json();
 }
+
+export async function generateTranscript(
+  tableName: string,
+  tableTopic: string,
+  messages: DialogueMessage[]
+): Promise<string> {
+  const res = await fetch(`${BASE}/transcript`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      table_name: tableName,
+      table_topic: tableTopic,
+      messages,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Transcript failed" }));
+    throw new Error(err.detail || "Transcript generation failed");
+  }
+
+  const data = await res.json();
+  return data.markdown;
+}

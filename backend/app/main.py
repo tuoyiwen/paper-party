@@ -9,7 +9,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from pydantic import BaseModel
+
 from .models import (
+    DialogueMessage,
     DialogueRequest,
     DialogueResponse,
     PartyAnalysis,
@@ -18,7 +21,7 @@ from .models import (
 )
 from .services.paper_parser import extract_text_from_pdf
 from .services.literature_mapper import analyze_paper
-from .services.dialogue_engine import chat_at_table, analyze_position
+from .services.dialogue_engine import chat_at_table, analyze_position, organize_transcript
 
 load_dotenv()
 
@@ -112,6 +115,33 @@ async def dialogue_at_table(table_id: str, request: DialogueRequest):
     )
 
     return response
+
+
+class TranscriptRequest(BaseModel):
+    table_name: str
+    table_topic: str
+    messages: list[DialogueMessage]
+
+
+class TranscriptResponse(BaseModel):
+    markdown: str
+
+
+@app.post("/api/transcript", response_model=TranscriptResponse)
+async def generate_transcript(request: TranscriptRequest):
+    """Generate an AI-organized transcript of a table discussion."""
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages to organize")
+
+    api_key = _get_api_key()
+    markdown = await organize_transcript(
+        table_name=request.table_name,
+        table_topic=request.table_topic,
+        messages=request.messages,
+        api_key=api_key,
+    )
+
+    return TranscriptResponse(markdown=markdown)
 
 
 @app.post("/api/position", response_model=PositionAnalysis)

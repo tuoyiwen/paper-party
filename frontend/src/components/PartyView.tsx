@@ -1,4 +1,5 @@
 import type { PartyAnalysis, Table } from "../types";
+import PaperTooltip from "./PaperTooltip";
 
 interface Props {
   party: PartyAnalysis;
@@ -103,35 +104,37 @@ export default function PartyView({ party, onJoinTable }: Props) {
             {/* Reference previews */}
             <div className="space-y-2">
               {table.references.slice(0, 3).map((ref, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
-                  <span
-                    className={`mt-0.5 shrink-0 ${
-                      STANCE_COLORS[ref.stance] || "text-party-muted"
-                    }`}
-                  >
-                    {ref.stance === "supports"
-                      ? "●"
-                      : ref.stance === "challenges"
-                        ? "▲"
-                        : ref.stance === "extends"
-                          ? "◆"
-                          : "★"}
-                  </span>
-                  <span className="text-party-muted">
-                    <span className="text-party-text">{ref.authors_full || ref.authors}</span>{" "}
-                    {ref.year && `(${ref.year})`}
-                    {ref.citation_count != null && (
-                      <span className="ml-1 text-party-accent/60" title="Citations">
-                        [{ref.citation_count} cited]
-                      </span>
-                    )}
-                    {ref.is_top_tier && (
-                      <span className="ml-1 text-green-400" title={ref.journal || "Top-tier journal"}>
-                        ✓
-                      </span>
-                    )}
-                  </span>
-                </div>
+                <PaperTooltip key={i} reference={ref}>
+                  <div className="flex items-start gap-2 text-xs cursor-default">
+                    <span
+                      className={`mt-0.5 shrink-0 ${
+                        STANCE_COLORS[ref.stance] || "text-party-muted"
+                      }`}
+                    >
+                      {ref.stance === "supports"
+                        ? "●"
+                        : ref.stance === "challenges"
+                          ? "▲"
+                          : ref.stance === "extends"
+                            ? "◆"
+                            : "★"}
+                    </span>
+                    <span className="text-party-muted">
+                      <span className="text-party-text">{ref.authors_full || ref.authors}</span>{" "}
+                      {ref.year && `(${ref.year})`}
+                      {ref.citation_count != null && (
+                        <span className="ml-1 text-party-accent/60" title="Citations">
+                          [{ref.citation_count} cited]
+                        </span>
+                      )}
+                      {ref.is_top_tier && (
+                        <span className="ml-1 text-green-400" title={ref.journal || "Top-tier journal"}>
+                          ✓
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </PaperTooltip>
               ))}
             </div>
 

@@ -198,3 +198,54 @@ async def analyze_position(
         gaps_and_opportunities=data["gaps_and_opportunities"],
         suggested_next_readings=data["suggested_next_readings"],
     )
+
+
+TRANSCRIPT_PROMPT = """You are organizing a scholarly discussion transcript from an academic "party" (学术舞会).
+
+Table: "{table_name}"
+Topic: {table_topic}
+
+Below is the raw conversation. Please organize it into a clean, well-structured markdown document with:
+
+1. **Discussion Summary** — A brief paragraph summarizing the key points discussed
+2. **Key Insights** — Bullet points of the most important insights that emerged
+3. **Points of Agreement** — Where the user and literature agreed
+4. **Points of Tension** — Where disagreements or debates arose
+5. **Open Questions** — Questions that remain unresolved
+6. **Full Transcript** — The complete conversation, cleaned up and formatted nicely
+
+Respond in the SAME LANGUAGE as the conversation. Use markdown formatting.
+
+RAW CONVERSATION:
+{conversation}
+"""
+
+
+async def organize_transcript(
+    table_name: str,
+    table_topic: str,
+    messages: list[DialogueMessage],
+    api_key: str,
+) -> str:
+    """Organize a chat transcript into a structured markdown document."""
+    conversation = ""
+    for msg in messages:
+        if msg.role == "user":
+            conversation += f"\n**You:** {msg.content}\n"
+        else:
+            conversation += f"\n**{msg.role}:** {msg.content}\n"
+
+    prompt = TRANSCRIPT_PROMPT.format(
+        table_name=table_name,
+        table_topic=table_topic,
+        conversation=conversation,
+    )
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=3000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    return response.content[0].text

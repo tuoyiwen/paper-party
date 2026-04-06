@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Table, DialogueMessage } from "../types";
-import { dialogueAtTable } from "../api";
+import { dialogueAtTable, generateTranscript } from "../api";
+import PaperTooltip from "./PaperTooltip";
 
 interface Props {
   table: Table;
@@ -11,6 +12,7 @@ export default function TableDialogue({ table, onBack }: Props) {
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +42,30 @@ export default function TableDialogue({ table, onBack }: Props) {
     }
   }
 
+  async function handleDownloadTranscript() {
+    if (messages.length === 0 || downloading) return;
+    setDownloading(true);
+
+    try {
+      const markdown = await generateTranscript(table.name, table.topic, messages);
+
+      // Download as .md file
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_transcript.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to generate transcript. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
       {/* Table Header */}
@@ -54,6 +80,15 @@ export default function TableDialogue({ table, onBack }: Props) {
           <h2 className="text-xl font-bold text-party-accent">{table.name}</h2>
           <p className="text-sm text-party-muted">{table.topic}</p>
         </div>
+        {messages.length > 0 && (
+          <button
+            onClick={handleDownloadTranscript}
+            disabled={downloading}
+            className="rounded-lg bg-party-accent/10 border border-party-accent/20 px-4 py-2 text-sm text-party-accent transition hover:bg-party-accent/20 disabled:opacity-40"
+          >
+            {downloading ? "Organizing..." : "Download Transcript"}
+          </button>
+        )}
       </div>
 
       {/* Participants sidebar + chat */}
@@ -65,33 +100,30 @@ export default function TableDialogue({ table, onBack }: Props) {
           </p>
           <div className="space-y-3">
             {table.references.map((ref, i) => (
-              <div key={i} className="rounded-lg bg-party-bg/50 p-3">
-                <div className="flex items-start justify-between">
-                  <p className="text-sm font-medium text-party-text">
-                    {ref.authors_full || ref.authors}
-                  </p>
-                  {ref.url && (
-                    <span className="text-green-400/60 text-xs shrink-0" title="Verified">✓</span>
+              <PaperTooltip key={i} reference={ref}>
+                <div className="rounded-lg bg-party-bg/50 p-3 cursor-default">
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm font-medium text-party-text">
+                      {ref.authors_full || ref.authors}
+                    </p>
+                    {ref.is_top_tier && (
+                      <span className="text-green-400 text-xs shrink-0" title={ref.journal || "Top-tier"}>✓</span>
+                    )}
+                  </div>
+                  {ref.year && (
+                    <p className="text-xs text-party-muted">({ref.year})</p>
                   )}
-                </div>
-                {ref.year && (
-                  <p className="text-xs text-party-muted">({ref.year})</p>
-                )}
-                {ref.journal && (
-                  <p className="text-xs text-green-400/70">{ref.journal}</p>
-                )}
-                {ref.citation_count != null && (
-                  <p className="text-xs text-party-accent/50">{ref.citation_count} citations</p>
-                )}
-                <p className="mt-1 text-xs text-party-muted italic">
-                  "{ref.key_argument}"
-                </p>
-                {ref.tldr && (
-                  <p className="mt-1 text-xs text-party-accent/70">
-                    TL;DR: {ref.tldr}
+                  {ref.journal && (
+                    <p className="text-xs text-green-400/70">{ref.journal}</p>
+                  )}
+                  {ref.citation_count != null && (
+                    <p className="text-xs text-party-accent/50">{ref.citation_count} citations</p>
+                  )}
+                  <p className="mt-1 text-xs text-party-muted italic">
+                    "{ref.key_argument}"
                   </p>
-                )}
-              </div>
+                </div>
+              </PaperTooltip>
             ))}
           </div>
 
