@@ -7,7 +7,7 @@ import PositionPanel from "./components/PositionPanel";
 import History from "./components/History";
 import MindMap from "./components/MindMap";
 import Pricing from "./components/Pricing";
-import { getPlan, setPlan, recordUpload, canUpload, type Plan } from "./plan";
+import { getPlan, setPlan, addPackCredits, recordUpload, canUpload, type Plan } from "./plan";
 
 type View = "upload" | "party" | "table" | "position" | "history" | "mindmap" | "pricing";
 
@@ -71,12 +71,22 @@ export default function App() {
     setHistory(updated);
   }
 
-  function handleUpgrade() {
+  function handleSelectPlan(newPlan: Plan) {
     // In production: redirect to Stripe checkout
-    // For now: simulate upgrade
-    setPlan("pro");
-    setPlanState("pro");
-    setView("party");
+    // For now: simulate purchase
+    if (newPlan === "paper_pack") {
+      addPackCredits(3);
+      setPlan("paper_pack");
+      setPlanState("paper_pack");
+    } else {
+      setPlan(newPlan);
+      setPlanState(newPlan);
+    }
+    if (party) {
+      setView("party");
+    } else {
+      setView("upload");
+    }
   }
 
   function handleJoinTable(table: Table) {
@@ -169,10 +179,12 @@ export default function App() {
                   className={`rounded-lg px-3 py-1.5 text-sm transition ${
                     plan === "pro"
                       ? "text-party-gold hover:text-party-gold/80"
-                      : "bg-party-gold/10 text-party-gold hover:bg-party-gold/20"
+                      : plan === "paper_pack"
+                        ? "text-blue-400 hover:text-blue-300"
+                        : "bg-party-gold/10 text-party-gold hover:bg-party-gold/20"
                   }`}
                 >
-                  {plan === "pro" ? "Pro" : "Upgrade"}
+                  {plan === "pro" ? "Pro" : plan === "paper_pack" ? "Paper Pack" : "Upgrade"}
                 </button>
                 <button
                   onClick={() => {
@@ -216,7 +228,7 @@ export default function App() {
           <MindMap party={party} position={positionResult} onBack={handleBackToParty} />
         )}
         {view === "pricing" && (
-          <Pricing currentPlan={plan} onUpgrade={handleUpgrade} onBack={handleBackToParty} />
+          <Pricing currentPlan={plan} onSelectPlan={handleSelectPlan} onBack={handleBackToParty} />
         )}
         {view === "position" && party && (
           <PositionPanel party={party} onBack={handleBackToParty} onPositionAnalyzed={setPositionResult} />

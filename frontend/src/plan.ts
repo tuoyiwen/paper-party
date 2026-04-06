@@ -1,12 +1,18 @@
 /**
- * Simple plan management using localStorage.
- * In production, this would be backed by a real auth/billing system.
+ * Plan management using localStorage.
+ * In production, this would be backed by a real auth/billing system (e.g. Stripe + Supabase).
  */
 
-export type Plan = "free" | "pro";
+export type Plan = "free" | "paper_pack" | "pro";
 
 const PLAN_KEY = "paper-party-plan";
 const USAGE_KEY = "paper-party-usage";
+const PACK_KEY = "paper-party-pack-credits";
+
+// Limits
+const FREE_UPLOADS_PER_MONTH = 1;
+const FREE_DIALOGUE_ROUNDS = 3;
+const PACK_PAPERS = 3;
 
 interface Usage {
   uploads_this_month: number;
@@ -27,6 +33,27 @@ export function setPlan(plan: Plan) {
   localStorage.setItem(PLAN_KEY, plan);
 }
 
+// Paper Pack credits
+export function getPackCredits(): number {
+  try {
+    return parseInt(localStorage.getItem(PACK_KEY) || "0", 10);
+  } catch {
+    return 0;
+  }
+}
+
+export function addPackCredits(count: number = PACK_PAPERS) {
+  const current = getPackCredits();
+  localStorage.setItem(PACK_KEY, String(current + count));
+}
+
+function usePackCredit() {
+  const current = getPackCredits();
+  if (current > 0) {
+    localStorage.setItem(PACK_KEY, String(current - 1));
+  }
+}
+
 function getUsage(): Usage {
   try {
     const raw = localStorage.getItem(USAGE_KEY);
@@ -45,25 +72,35 @@ function saveUsage(usage: Usage) {
 }
 
 export function recordUpload() {
+  const plan = getPlan();
+  if (plan === "paper_pack") {
+    usePackCredit();
+  }
   const usage = getUsage();
   usage.uploads_this_month += 1;
   saveUsage(usage);
 }
 
 export function canUpload(): boolean {
-  if (getPlan() === "pro") return true;
+  const plan = getPlan();
+  if (plan === "pro") return true;
+  if (plan === "paper_pack") return getPackCredits() > 0;
+  // Free
   const usage = getUsage();
-  return usage.uploads_this_month < 3;
+  return usage.uploads_this_month < FREE_UPLOADS_PER_MONTH;
 }
 
 export function getUploadsRemaining(): number {
-  if (getPlan() === "pro") return Infinity;
+  const plan = getPlan();
+  if (plan === "pro") return Infinity;
+  if (plan === "paper_pack") return getPackCredits();
   const usage = getUsage();
-  return Math.max(0, 3 - usage.uploads_this_month);
+  return Math.max(0, FREE_UPLOADS_PER_MONTH - usage.uploads_this_month);
 }
 
 export function canUseProFeature(): boolean {
-  return getPlan() === "pro";
+  const plan = getPlan();
+  return plan === "pro" || plan === "paper_pack";
 }
 
 // Dialogue round limits
@@ -83,11 +120,13 @@ export function recordDialogueRound(tableId: string) {
 }
 
 export function canDialogue(tableId: string): boolean {
-  if (getPlan() === "pro") return true;
-  return getDialogueRounds(tableId) < 5;
+  const plan = getPlan();
+  if (plan === "pro" || plan === "paper_pack") return true;
+  return getDialogueRounds(tableId) < FREE_DIALOGUE_ROUNDS;
 }
 
 export function getDialogueRemaining(tableId: string): number {
-  if (getPlan() === "pro") return Infinity;
-  return Math.max(0, 5 - getDialogueRounds(tableId));
+  const plan = getPlan();
+  if (plan === "pro" || plan === "paper_pack") return Infinity;
+  return Math.max(0, FREE_DIALOGUE_ROUNDS - getDialogueRounds(tableId));
 }
