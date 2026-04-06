@@ -7,7 +7,7 @@ import PositionPanel from "./components/PositionPanel";
 import History from "./components/History";
 import MindMap from "./components/MindMap";
 import Pricing from "./components/Pricing";
-import { getPlan, setPlan, addPackCredits, recordUpload, canUpload, type Plan } from "./plan";
+import { getPlan, setPlan, addPackCredits, recordUpload, type Plan } from "./plan";
 
 type View = "upload" | "party" | "table" | "position" | "history" | "mindmap" | "pricing";
 
