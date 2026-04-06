@@ -21,7 +21,10 @@ from .models import (
 )
 from .services.paper_parser import extract_text_from_pdf
 from .services.literature_mapper import analyze_paper
-from .services.dialogue_engine import chat_at_table, analyze_position, organize_transcript
+from fastapi.responses import Response
+
+from .services.dialogue_engine import chat_at_table, analyze_position, organize_transcript, organize_bilingual_summary
+from .services.podcast_generator import generate_podcast
 
 load_dotenv()
 
@@ -52,6 +55,13 @@ def _get_api_key() -> str:
 
 def _get_s2_api_key() -> str | None:
     return os.getenv("S2_API_KEY")
+
+
+def _get_openai_api_key() -> str:
+    key = os.getenv("OPENAI_API_KEY", "")
+    if not key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured (needed for podcast TTS)")
+    return key
 
 
 @app.get("/")
@@ -142,6 +152,47 @@ async def generate_transcript(request: TranscriptRequest):
     )
 
     return TranscriptResponse(markdown=markdown)
+
+
+@app.post("/api/bilingual-summary", response_model=TranscriptResponse)
+async def generate_bilingual_summary(request: TranscriptRequest):
+    """Generate a bilingual (EN/CN) summary of a table discussion."""
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages to summarize")
+
+    api_key = _get_api_key()
+    markdown = await organize_bilingual_summary(
+        table_name=request.table_name,
+        table_topic=request.table_topic,
+        messages=request.messages,
+        api_key=api_key,
+    )
+
+    return TranscriptResponse(markdown=markdown)
+
+
+@app.post("/api/podcast")
+async def generate_podcast_audio(request: TranscriptRequest):
+    """Generate a podcast-style audio from a table discussion."""
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages to convert")
+
+    api_key = _get_api_key()
+    openai_key = _get_openai_api_key()
+
+    audio_bytes = await generate_podcast(
+        table_name=request.table_name,
+        table_topic=request.table_topic,
+        messages=request.messages,
+        anthropic_api_key=api_key,
+        openai_api_key=openai_key,
+    )
+
+    return Response(
+        content=audio_bytes,
+        media_type="audio/wav",
+        headers={"Content-Disposition": f'attachment; filename="{request.table_name}_podcast.wav"'},
+    )
 
 
 @app.post("/api/position", response_model=PositionAnalysis)

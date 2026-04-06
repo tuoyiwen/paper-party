@@ -249,3 +249,84 @@ async def organize_transcript(
     )
 
     return response.content[0].text
+
+
+BILINGUAL_PROMPT = """You are organizing a scholarly discussion transcript into a bilingual (English + Chinese) summary report.
+
+Table: "{table_name}"
+Topic: {table_topic}
+
+Create a professional bilingual summary with BOTH English and Chinese for each section. Format as markdown with this structure:
+
+# Discussion Summary / 讨论摘要
+
+[English summary paragraph]
+
+[中文摘要段落]
+
+# Key Insights / 关键洞察
+
+- [English insight 1] / [中文洞察 1]
+- [English insight 2] / [中文洞察 2]
+...
+
+# Your Arguments vs Literature / 你的观点 vs 文献回应
+
+| Your Point / 你的观点 | Literature Response / 文献回应 |
+|---|---|
+| [English] / [中文] | [English] / [中文] |
+...
+
+# Points of Agreement / 共识
+
+- [English] / [中文]
+...
+
+# Points of Tension / 分歧
+
+- [English] / [中文]
+...
+
+# Open Questions / 未解决问题
+
+- [English] / [中文]
+...
+
+# Suggested Next Steps / 建议的下一步
+
+- [English] / [中文]
+...
+
+RAW CONVERSATION:
+{conversation}
+"""
+
+
+async def organize_bilingual_summary(
+    table_name: str,
+    table_topic: str,
+    messages: list[DialogueMessage],
+    api_key: str,
+) -> str:
+    """Organize a chat into a bilingual (EN/CN) structured summary."""
+    conversation = ""
+    for msg in messages:
+        if msg.role == "user":
+            conversation += f"\n**You:** {msg.content}\n"
+        else:
+            conversation += f"\n**{msg.role}:** {msg.content}\n"
+
+    prompt = BILINGUAL_PROMPT.format(
+        table_name=table_name,
+        table_topic=table_topic,
+        conversation=conversation,
+    )
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    return response.content[0].text

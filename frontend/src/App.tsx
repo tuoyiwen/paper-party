@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import type { PartyAnalysis, Table } from "./types";
+import type { PartyAnalysis, Table, PositionAnalysis } from "./types";
 import PaperUpload from "./components/PaperUpload";
 import PartyView from "./components/PartyView";
 import TableDialogue from "./components/TableDialogue";
 import PositionPanel from "./components/PositionPanel";
 import History from "./components/History";
+import MindMap from "./components/MindMap";
+import Pricing from "./components/Pricing";
+import { getPlan, setPlan, recordUpload, canUpload, type Plan } from "./plan";
 
-type View = "upload" | "party" | "table" | "position" | "history";
+type View = "upload" | "party" | "table" | "position" | "history" | "mindmap" | "pricing";
 
 interface HistoryEntry {
   id: string;
@@ -52,7 +55,9 @@ export default function App() {
   const [view, setView] = useState<View>("upload");
   const [party, setParty] = useState<PartyAnalysis | null>(null);
   const [activeTable, setActiveTable] = useState<Table | null>(null);
+  const [positionResult, setPositionResult] = useState<PositionAnalysis | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [plan, setPlanState] = useState<Plan>(getPlan());
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -61,8 +66,17 @@ export default function App() {
   function handlePartyReady(p: PartyAnalysis) {
     setParty(p);
     setView("party");
+    recordUpload();
     const updated = addToHistory(p);
     setHistory(updated);
+  }
+
+  function handleUpgrade() {
+    // In production: redirect to Stripe checkout
+    // For now: simulate upgrade
+    setPlan("pro");
+    setPlanState("pro");
+    setView("party");
   }
 
   function handleJoinTable(table: Table) {
@@ -125,6 +139,16 @@ export default function App() {
                   Party Overview
                 </button>
                 <button
+                  onClick={() => setView("mindmap")}
+                  className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                    view === "mindmap"
+                      ? "bg-party-accent text-white"
+                      : "text-party-muted hover:text-white"
+                  }`}
+                >
+                  Mind Map
+                </button>
+                <button
                   onClick={() => setView("position")}
                   className={`rounded-lg px-3 py-1.5 text-sm transition ${
                     view === "position"
@@ -139,6 +163,16 @@ export default function App() {
                   className="rounded-lg px-3 py-1.5 text-sm text-party-muted hover:text-white transition"
                 >
                   History
+                </button>
+                <button
+                  onClick={() => setView("pricing")}
+                  className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                    plan === "pro"
+                      ? "text-party-gold hover:text-party-gold/80"
+                      : "bg-party-gold/10 text-party-gold hover:bg-party-gold/20"
+                  }`}
+                >
+                  {plan === "pro" ? "Pro" : "Upgrade"}
                 </button>
                 <button
                   onClick={() => {
@@ -178,8 +212,14 @@ export default function App() {
             onBack={handleBackToParty}
           />
         )}
+        {view === "mindmap" && party && (
+          <MindMap party={party} position={positionResult} onBack={handleBackToParty} />
+        )}
+        {view === "pricing" && (
+          <Pricing currentPlan={plan} onUpgrade={handleUpgrade} onBack={handleBackToParty} />
+        )}
         {view === "position" && party && (
-          <PositionPanel party={party} onBack={handleBackToParty} />
+          <PositionPanel party={party} onBack={handleBackToParty} onPositionAnalyzed={setPositionResult} />
         )}
       </main>
     </div>

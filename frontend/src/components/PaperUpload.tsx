@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import type { PartyAnalysis } from "../types";
 import { uploadPaper } from "../api";
+import { canUpload, getUploadsRemaining } from "../plan";
 
 interface HistoryEntry {
   id: string;
@@ -27,6 +28,11 @@ export default function PaperUpload({ onAnalyzed, history, onOpenHistory }: Prop
   async function handleFile(file: File) {
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       setError("Please upload a PDF file");
+      return;
+    }
+
+    if (!canUpload()) {
+      setError(`You've reached the free plan limit (3 papers/month). Upgrade to Pro for unlimited uploads.`);
       return;
     }
 
@@ -112,6 +118,11 @@ export default function PaperUpload({ onAnalyzed, history, onOpenHistory }: Prop
             </svg>
             <p className="mb-1 text-lg font-medium">Drop your paper here</p>
             <p className="text-sm text-party-muted">or click to browse (PDF)</p>
+            {getUploadsRemaining() < Infinity && (
+              <p className="mt-2 text-xs text-party-accent/60">
+                {getUploadsRemaining()} uploads remaining this month
+              </p>
+            )}
           </>
         )}
       </div>

@@ -87,3 +87,50 @@ export async function generateTranscript(
   const data = await res.json();
   return data.markdown;
 }
+
+export async function generateBilingualSummary(
+  tableName: string,
+  tableTopic: string,
+  messages: DialogueMessage[]
+): Promise<string> {
+  const res = await fetch(`${BASE}/bilingual-summary`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      table_name: tableName,
+      table_topic: tableTopic,
+      messages,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Summary failed" }));
+    throw new Error(err.detail || "Bilingual summary generation failed");
+  }
+
+  const data = await res.json();
+  return data.markdown;
+}
+
+export async function generatePodcast(
+  tableName: string,
+  tableTopic: string,
+  messages: DialogueMessage[]
+): Promise<Blob> {
+  const res = await fetch(`${BASE}/podcast`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      table_name: tableName,
+      table_topic: tableTopic,
+      messages,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Podcast failed" }));
+    throw new Error(err.detail || "Podcast generation failed");
+  }
+
+  return res.blob();
+}

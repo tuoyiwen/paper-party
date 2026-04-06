@@ -5,6 +5,7 @@ import { analyzePosition } from "../api";
 interface Props {
   party: PartyAnalysis;
   onBack: () => void;
+  onPositionAnalyzed?: (result: PositionAnalysis) => void;
 }
 
 const RELATIONSHIP_COLORS: Record<string, string> = {
@@ -14,7 +15,7 @@ const RELATIONSHIP_COLORS: Record<string, string> = {
   novel: "bg-party-gold/15 text-party-gold border-party-gold/30",
 };
 
-export default function PositionPanel({ party, onBack }: Props) {
+export default function PositionPanel({ party, onBack, onPositionAnalyzed }: Props) {
   const [viewpoint, setViewpoint] = useState("");
   const [analysis, setAnalysis] = useState<PositionAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ export default function PositionPanel({ party, onBack }: Props) {
     try {
       const result = await analyzePosition(viewpoint);
       setAnalysis(result);
+      onPositionAnalyzed?.(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
     } finally {

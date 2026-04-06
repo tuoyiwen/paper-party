@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import type { Table, DialogueMessage } from "../types";
-import { dialogueAtTable, generateTranscript } from "../api";
+import { dialogueAtTable, generateTranscript, generateBilingualSummary, generatePodcast } from "../api";
 import PaperTooltip from "./PaperTooltip";
+import { canDialogue, recordDialogueRound, getDialogueRemaining, canUseProFeature } from "../plan";
 
 interface Props {
   table: Table;
@@ -13,6 +14,8 @@ export default function TableDialogue({ table, onBack }: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingBilingual, setDownloadingBilingual] = useState(false);
+  const [generatingPodcast, setGeneratingPodcast] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,6 +26,14 @@ export default function TableDialogue({ table, onBack }: Props) {
     const text = input.trim();
     if (!text || loading) return;
 
+    if (!canDialogue(table.id)) {
+      setMessages([
+        ...messages,
+        { role: "system", content: "You've reached the free plan limit (5 rounds per table). Upgrade to Pro for unlimited dialogue." },
+      ]);
+      return;
+    }
+
     const userMsg: DialogueMessage = { role: "user", content: text };
     const newHistory = [...messages, userMsg];
     setMessages(newHistory);
@@ -31,6 +42,7 @@ export default function TableDialogue({ table, onBack }: Props) {
 
     try {
       const res = await dialogueAtTable(table.id, text, messages);
+      recordDialogueRound(table.id);
       setMessages([...newHistory, ...res.messages]);
     } catch {
       setMessages([
@@ -66,6 +78,51 @@ export default function TableDialogue({ table, onBack }: Props) {
     }
   }
 
+  async function handleDownloadBilingual() {
+    if (messages.length === 0 || downloadingBilingual) return;
+    setDownloadingBilingual(true);
+
+    try {
+      const markdown = await generateBilingualSummary(table.name, table.topic, messages);
+
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_bilingual_summary.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to generate bilingual summary. Please try again.");
+    } finally {
+      setDownloadingBilingual(false);
+    }
+  }
+
+  async function handleGeneratePodcast() {
+    if (messages.length === 0 || generatingPodcast) return;
+    setGeneratingPodcast(true);
+
+    try {
+      const blob = await generatePodcast(table.name, table.topic, messages);
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_podcast.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Podcast generation failed. Make sure OPENAI_API_KEY is configured.");
+    } finally {
+      setGeneratingPodcast(false);
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
       {/* Table Header */}
@@ -81,13 +138,44 @@ export default function TableDialogue({ table, onBack }: Props) {
           <p className="text-sm text-party-muted">{table.topic}</p>
         </div>
         {messages.length > 0 && (
-          <button
-            onClick={handleDownloadTranscript}
-            disabled={downloading}
-            className="rounded-lg bg-party-accent/10 border border-party-accent/20 px-4 py-2 text-sm text-party-accent transition hover:bg-party-accent/20 disabled:opacity-40"
-          >
-            {downloading ? "Organizing..." : "Download Transcript"}
-          </button>
+          <div className="flex gap-2">
+            {canUseProFeature() ? (
+              <>
+                <button
+                  onClick={handleDownloadTranscript}
+                  disabled={downloading}
+                  className="rounded-lg bg-party-accent/10 border border-party-accent/20 px-4 py-2 text-sm text-party-accent transition hover:bg-party-accent/20 disabled:opacity-40"
+                >
+                  {downloading ? "Organizing..." : "Transcript"}
+                </button>
+                <button
+                  onClick={handleDownloadBilingual}
+                  disabled={downloadingBilingual}
+                  className="rounded-lg bg-party-gold/10 border border-party-gold/20 px-4 py-2 text-sm text-party-gold transition hover:bg-party-gold/20 disabled:opacity-40"
+                >
+                  {downloadingBilingual ? "Generating..." : "Bilingual"}
+                </button>
+                <button
+                  onClick={handleGeneratePodcast}
+                  disabled={generatingPodcast}
+                  className="rounded-lg bg-party-warm/10 border border-party-warm/20 px-4 py-2 text-sm text-party-warm transition hover:bg-party-warm/20 disabled:opacity-40"
+                >
+                  {generatingPodcast ? "Recording..." : "Podcast"}
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg bg-party-gold/5 border border-party-gold/20 px-4 py-2">
+                <span className="text-xs text-party-muted">
+                  {getDialogueRemaining(table.id) < Infinity
+                    ? `${getDialogueRemaining(table.id)} rounds left`
+                    : ""}
+                </span>
+                <span className="text-xs text-party-gold">
+                  Upgrade to Pro for Transcript, Bilingual Summary & Podcast
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
