@@ -13,6 +13,39 @@ from ..models import (
     Table,
 )
 import json
+import re
+
+
+def _extract_json(text: str) -> dict:
+    """Extract JSON from a response that may contain markdown fences or extra text."""
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+
+    start = text.find("{")
+    if start != -1:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except json.JSONDecodeError:
+                        break
+
+    raise ValueError(f"Could not extract JSON: {text[:200]}...")
 
 TABLE_DIALOGUE_SYSTEM = """You are simulating a scholarly discussion at a table in an academic "party" (学术舞会).
 
@@ -190,7 +223,7 @@ async def analyze_position(
         messages=[{"role": "user", "content": prompt}],
     )
 
-    data = json.loads(response.content[0].text)
+    data = _extract_json(response.content[0].text)
 
     return PositionAnalysis(
         position_summary=data["position_summary"],
