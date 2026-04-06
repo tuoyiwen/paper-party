@@ -181,7 +181,7 @@ async def analyze_paper(
                         "is_top_tier": True,
                     })
 
-                ref_dicts = top_tier_refs
+                ref_dicts = top_tier_refs if top_tier_refs else ref_dicts
 
         refs = [
             LiteratureReference(
