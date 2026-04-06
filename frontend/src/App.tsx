@@ -1,20 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { PartyAnalysis, Table } from "./types";
 import PaperUpload from "./components/PaperUpload";
 import PartyView from "./components/PartyView";
 import TableDialogue from "./components/TableDialogue";
 import PositionPanel from "./components/PositionPanel";
+import History from "./components/History";
 
-type View = "upload" | "party" | "table" | "position";
+type View = "upload" | "party" | "table" | "position" | "history";
+
+interface HistoryEntry {
+  id: string;
+  paper_title: string;
+  broad_question: string;
+  tables_count: number;
+  created_at: string;
+  party: PartyAnalysis;
+}
+
+const HISTORY_KEY = "paper-party-history";
+
+function loadHistory(): HistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(entries: HistoryEntry[]) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+}
+
+function addToHistory(party: PartyAnalysis): HistoryEntry[] {
+  const entries = loadHistory();
+  const entry: HistoryEntry = {
+    id: `party-${Date.now()}`,
+    paper_title: party.paper_title,
+    broad_question: party.broad_question.question,
+    tables_count: party.tables.length,
+    created_at: new Date().toISOString(),
+    party,
+  };
+  // Prepend, keep max 20
+  const updated = [entry, ...entries].slice(0, 20);
+  saveHistory(updated);
+  return updated;
+}
 
 export default function App() {
   const [view, setView] = useState<View>("upload");
   const [party, setParty] = useState<PartyAnalysis | null>(null);
   const [activeTable, setActiveTable] = useState<Table | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   function handlePartyReady(p: PartyAnalysis) {
     setParty(p);
     setView("party");
+    const updated = addToHistory(p);
+    setHistory(updated);
   }
 
   function handleJoinTable(table: Table) {
@@ -26,6 +74,19 @@ export default function App() {
     setActiveTable(null);
     setView("party");
   }
+
+  function handleOpenHistory(entry: HistoryEntry) {
+    setParty(entry.party);
+    setView("party");
+  }
+
+  function handleDeleteHistory(id: string) {
+    const updated = history.filter((h) => h.id !== id);
+    saveHistory(updated);
+    setHistory(updated);
+  }
+
+  const hasHistory = history.length > 0;
 
   return (
     <div className="min-h-screen">
@@ -39,7 +100,19 @@ export default function App() {
             Paper Party
           </button>
           <div className="flex gap-3">
-            {party && view !== "upload" && (
+            {hasHistory && (view === "upload" || view === "history") && (
+              <button
+                onClick={() => setView(view === "history" ? "upload" : "history")}
+                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                  view === "history"
+                    ? "bg-party-accent text-white"
+                    : "text-party-muted hover:text-white"
+                }`}
+              >
+                {view === "history" ? "New Paper" : "History"}
+              </button>
+            )}
+            {party && view !== "upload" && view !== "history" && (
               <>
                 <button
                   onClick={() => setView("party")}
@@ -62,6 +135,12 @@ export default function App() {
                   My Position
                 </button>
                 <button
+                  onClick={() => setView("history")}
+                  className="rounded-lg px-3 py-1.5 text-sm text-party-muted hover:text-white transition"
+                >
+                  History
+                </button>
+                <button
                   onClick={() => {
                     setParty(null);
                     setActiveTable(null);
@@ -79,7 +158,17 @@ export default function App() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-6xl px-6 py-8">
-        {view === "upload" && <PaperUpload onAnalyzed={handlePartyReady} />}
+        {view === "upload" && (
+          <PaperUpload onAnalyzed={handlePartyReady} history={history} onOpenHistory={handleOpenHistory} />
+        )}
+        {view === "history" && (
+          <History
+            entries={history}
+            onOpen={handleOpenHistory}
+            onDelete={handleDeleteHistory}
+            onNewPaper={() => setView("upload")}
+          />
+        )}
         {view === "party" && party && (
           <PartyView party={party} onJoinTable={handleJoinTable} />
         )}

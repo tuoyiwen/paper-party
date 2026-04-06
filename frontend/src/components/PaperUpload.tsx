@@ -2,11 +2,22 @@ import { useState, useRef } from "react";
 import type { PartyAnalysis } from "../types";
 import { uploadPaper } from "../api";
 
-interface Props {
-  onAnalyzed: (party: PartyAnalysis) => void;
+interface HistoryEntry {
+  id: string;
+  paper_title: string;
+  broad_question: string;
+  tables_count: number;
+  created_at: string;
+  party: PartyAnalysis;
 }
 
-export default function PaperUpload({ onAnalyzed }: Props) {
+interface Props {
+  onAnalyzed: (party: PartyAnalysis) => void;
+  history?: HistoryEntry[];
+  onOpenHistory?: (entry: HistoryEntry) => void;
+}
+
+export default function PaperUpload({ onAnalyzed, history, onOpenHistory }: Props) {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +150,32 @@ export default function PaperUpload({ onAnalyzed }: Props) {
           </div>
         ))}
       </div>
+
+      {/* Recent History */}
+      {history && history.length > 0 && onOpenHistory && (
+        <div className="mt-12 w-full max-w-2xl">
+          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-party-muted">
+            Recent Parties
+          </h3>
+          <div className="space-y-2">
+            {history.slice(0, 5).map((entry) => (
+              <button
+                key={entry.id}
+                onClick={() => onOpenHistory(entry)}
+                className="w-full rounded-xl border border-party-accent/10 bg-party-card/40 p-4 text-left transition-all hover:border-party-accent/30 hover:bg-party-card"
+              >
+                <p className="text-sm font-medium text-party-text">
+                  {entry.paper_title}
+                </p>
+                <p className="mt-1 text-xs text-party-muted">
+                  {entry.tables_count} tables &middot;{" "}
+                  {new Date(entry.created_at).toLocaleDateString()}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
