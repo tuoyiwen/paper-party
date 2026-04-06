@@ -20,6 +20,10 @@ This table is called "{table_name}" and the discussion topic is: {table_topic}
 
 The key debate at this table: {key_debate}
 
+Consensus at this table: {consensus}
+
+Key differences: {differences}
+
 The following scholars/papers are sitting at this table:
 {references_description}
 
@@ -66,12 +70,18 @@ Respond in the SAME LANGUAGE as the user's viewpoint. Return ONLY valid JSON.
 def _build_references_description(table: Table) -> str:
     parts = []
     for ref in table.references:
-        parts.append(
+        desc = (
             f"- {ref.authors} ({ref.year or 'n.d.'}): \"{ref.title}\"\n"
             f"  Stance: {ref.stance}\n"
             f"  Key argument: {ref.key_argument}\n"
             f"  Summary: {ref.summary}"
         )
+        # Add real abstract from Semantic Scholar if available
+        if ref.abstract:
+            desc += f"\n  Real abstract: {ref.abstract[:500]}"
+        if ref.tldr:
+            desc += f"\n  TL;DR: {ref.tldr}"
+        parts.append(desc)
     return "\n\n".join(parts)
 
 
@@ -86,6 +96,8 @@ async def chat_at_table(
         table_name=table.name,
         table_topic=table.topic,
         key_debate=table.key_debate,
+        consensus=table.consensus or "Not yet identified",
+        differences=table.differences or "Not yet identified",
         references_description=_build_references_description(table),
     )
 

@@ -47,6 +47,10 @@ def _get_api_key() -> str:
     return key
 
 
+def _get_s2_api_key() -> str | None:
+    return os.getenv("S2_API_KEY")
+
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Paper Party 🎉", "version": "0.1.0"}
@@ -65,13 +69,15 @@ async def upload_paper(file: UploadFile):
     # Parse PDF
     parsed = extract_text_from_pdf(pdf_bytes)
 
-    # Analyze with Claude
+    # Analyze with Claude + enrich with Semantic Scholar
     api_key = _get_api_key()
+    s2_api_key = _get_s2_api_key()
     party = await analyze_paper(
         title=parsed["title"],
         abstract=parsed["abstract"],
         full_text=parsed["full_text"],
         api_key=api_key,
+        s2_api_key=s2_api_key,
     )
 
     # Store for later dialogue

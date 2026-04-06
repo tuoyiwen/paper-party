@@ -29,6 +29,13 @@ class LiteratureReference(BaseModel):
     key_argument: str
     stance: str  # e.g. "supports", "challenges", "extends", "proposes alternative"
     summary: str
+    # Enriched fields from Semantic Scholar
+    abstract: str | None = None
+    citation_count: int | None = None
+    url: str | None = None
+    s2_id: str | None = None
+    authors_full: str | None = None
+    tldr: str | None = None
 
 
 class Table(BaseModel):
@@ -39,6 +46,8 @@ class Table(BaseModel):
     description: str
     key_debate: str
     references: list[LiteratureReference]
+    consensus: str | None = None
+    differences: str | None = None
 
 
 class PartyAnalysis(BaseModel):

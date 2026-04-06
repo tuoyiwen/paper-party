@@ -75,12 +75,30 @@ export default function PartyView({ party, onJoinTable }: Props) {
 
             <p className="mb-3 text-sm text-party-text">{table.topic}</p>
 
-            <div className="mb-4 rounded-lg bg-party-bg/50 p-3">
+            <div className="mb-3 rounded-lg bg-party-bg/50 p-3">
               <p className="text-xs font-medium text-party-gold mb-1">
                 Key Debate
               </p>
               <p className="text-sm text-party-muted">{table.key_debate}</p>
             </div>
+
+            {/* Consensus & Differences */}
+            {table.consensus && (
+              <div className="mb-3 rounded-lg bg-green-500/5 border border-green-500/10 p-3">
+                <p className="text-xs font-medium text-green-400 mb-1">
+                  Consensus
+                </p>
+                <p className="text-xs text-party-muted line-clamp-2">{table.consensus}</p>
+              </div>
+            )}
+            {table.differences && (
+              <div className="mb-3 rounded-lg bg-red-500/5 border border-red-500/10 p-3">
+                <p className="text-xs font-medium text-red-400 mb-1">
+                  Differences
+                </p>
+                <p className="text-xs text-party-muted line-clamp-2">{table.differences}</p>
+              </div>
+            )}
 
             {/* Reference previews */}
             <div className="space-y-2">
@@ -100,8 +118,18 @@ export default function PartyView({ party, onJoinTable }: Props) {
                           : "★"}
                   </span>
                   <span className="text-party-muted">
-                    <span className="text-party-text">{ref.authors}</span>{" "}
+                    <span className="text-party-text">{ref.authors_full || ref.authors}</span>{" "}
                     {ref.year && `(${ref.year})`}
+                    {ref.citation_count != null && (
+                      <span className="ml-1 text-party-accent/60" title="Citations">
+                        [{ref.citation_count} cited]
+                      </span>
+                    )}
+                    {ref.url && (
+                      <span className="ml-1 text-green-400/60" title="Verified on Semantic Scholar">
+                        ✓
+                      </span>
+                    )}
                   </span>
                 </div>
               ))}

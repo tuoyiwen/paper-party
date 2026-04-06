@@ -66,20 +66,47 @@ export default function TableDialogue({ table, onBack }: Props) {
           <div className="space-y-3">
             {table.references.map((ref, i) => (
               <div key={i} className="rounded-lg bg-party-bg/50 p-3">
-                <p className="text-sm font-medium text-party-text">
-                  {ref.authors}
-                </p>
+                <div className="flex items-start justify-between">
+                  <p className="text-sm font-medium text-party-text">
+                    {ref.authors_full || ref.authors}
+                  </p>
+                  {ref.url && (
+                    <span className="text-green-400/60 text-xs shrink-0" title="Verified">✓</span>
+                  )}
+                </div>
                 {ref.year && (
                   <p className="text-xs text-party-muted">({ref.year})</p>
+                )}
+                {ref.citation_count != null && (
+                  <p className="text-xs text-party-accent/50">{ref.citation_count} citations</p>
                 )}
                 <p className="mt-1 text-xs text-party-muted italic">
                   "{ref.key_argument}"
                 </p>
+                {ref.tldr && (
+                  <p className="mt-1 text-xs text-party-accent/70">
+                    TL;DR: {ref.tldr}
+                  </p>
+                )}
               </div>
             ))}
           </div>
 
-          <div className="mt-4 rounded-lg bg-party-accent/10 p-3">
+          {/* Consensus & Differences */}
+          {table.consensus && (
+            <div className="mt-4 rounded-lg bg-green-500/10 p-3">
+              <p className="text-xs font-medium text-green-400">Consensus</p>
+              <p className="mt-1 text-xs text-party-muted">{table.consensus}</p>
+            </div>
+          )}
+          {table.differences && (
+            <div className="mt-3 rounded-lg bg-red-500/10 p-3">
+              <p className="text-xs font-medium text-red-400">Differences</p>
+              <p className="mt-1 text-xs text-party-muted">{table.differences}</p>
+            </div>
+          )}
+
+          <div className="mt-3 rounded-lg bg-party-accent/10 p-3">
             <p className="text-xs font-medium text-party-accent">Key Debate</p>
             <p className="mt-1 text-xs text-party-muted">{table.key_debate}</p>
           </div>

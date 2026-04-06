@@ -11,6 +11,12 @@ export interface LiteratureReference {
   key_argument: string;
   stance: string;
   summary: string;
+  abstract: string | null;
+  citation_count: number | null;
+  url: string | null;
+  s2_id: string | null;
+  authors_full: string | null;
+  tldr: string | null;
 }
 
 export interface Table {
@@ -20,6 +26,8 @@ export interface Table {
   description: string;
   key_debate: string;
   references: LiteratureReference[];
+  consensus: string | null;
+  differences: string | null;
 }
 
 export interface PartyAnalysis {

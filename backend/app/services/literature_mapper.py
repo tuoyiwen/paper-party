@@ -8,6 +8,7 @@ import uuid
 import anthropic
 
 from ..models import LiteratureReference, PartyAnalysis, ResearchQuestion, Table
+from .semantic_scholar import enrich_references
 
 ANALYSIS_PROMPT = """You are an expert academic research analyst. You are helping a researcher understand the "conversation" happening in the academic literature around a paper they uploaded.
 
@@ -29,6 +30,8 @@ Given the following paper, please analyze it and return a JSON object with this 
       "topic": "The specific sub-question this table discusses",
       "description": "What this stream of literature is about and why it matters",
       "key_debate": "The central tension or disagreement at this table",
+      "consensus": "What do most papers at this table AGREE on? What is the common ground?",
+      "differences": "Where do papers DISAGREE? What are the key points of contention, different methodologies, or conflicting findings?",
       "references": [
         {{
           "title": "Referenced paper title",
@@ -50,7 +53,9 @@ IMPORTANT RULES:
 4. Other tables should represent adjacent but distinct debates that connect to the broad question.
 5. Make the "key_debate" vivid — frame it as an actual intellectual tension, not just a topic.
 6. The references should represent REAL papers cited in the text. Extract actual author names and titles when possible.
-7. Return ONLY valid JSON, no markdown code fences.
+7. "consensus" should describe what the papers at this table fundamentally agree on.
+8. "differences" should describe the specific disagreements, methodological divides, or conflicting evidence.
+9. Return ONLY valid JSON, no markdown code fences.
 
 ---
 
@@ -68,6 +73,7 @@ async def analyze_paper(
     abstract: str,
     full_text: str,
     api_key: str,
+    s2_api_key: str | None = None,
 ) -> PartyAnalysis:
     """Analyze a paper and map its literature landscape."""
     # Truncate full text to fit context window
@@ -94,10 +100,29 @@ async def analyze_paper(
 
     # Build structured result
     tables = []
-    for i, t in enumerate(data["tables"]):
+    for t in data["tables"]:
+        ref_dicts = t["references"]
+
+        # Enrich references with Semantic Scholar data
+        if s2_api_key:
+            ref_dicts = await enrich_references(ref_dicts, s2_api_key)
+
         refs = [
-            LiteratureReference(**r)
-            for r in t["references"]
+            LiteratureReference(
+                title=r.get("title", ""),
+                authors=r.get("authors", ""),
+                year=str(r["year"]) if r.get("year") else None,
+                key_argument=r.get("key_argument", ""),
+                stance=r.get("stance", ""),
+                summary=r.get("summary", ""),
+                abstract=r.get("abstract"),
+                citation_count=r.get("citation_count"),
+                url=r.get("url"),
+                s2_id=r.get("s2_id"),
+                authors_full=r.get("authors_full"),
+                tldr=r.get("tldr"),
+            )
+            for r in ref_dicts
         ]
         tables.append(Table(
             id=f"table-{uuid.uuid4().hex[:8]}",
@@ -105,6 +130,8 @@ async def analyze_paper(
             topic=t["topic"],
             description=t["description"],
             key_debate=t["key_debate"],
+            consensus=t.get("consensus"),
+            differences=t.get("differences"),
             references=refs,
         ))
 
