@@ -134,3 +134,39 @@ export async function generatePodcast(
 
   return res.blob();
 }
+
+export async function generateLandscapeLR(): Promise<string> {
+  const res = await fetch(`${BASE}/literature-review/landscape`, {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "LR generation failed" }));
+    throw new Error(err.detail || "Literature review generation failed");
+  }
+
+  const data = await res.json();
+  return data.markdown;
+}
+
+export async function generatePositionLR(
+  userQuestion: string,
+  discussions: string
+): Promise<string> {
+  const res = await fetch(`${BASE}/literature-review/position`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_question: userQuestion,
+      discussions,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "LR generation failed" }));
+    throw new Error(err.detail || "Position literature review generation failed");
+  }
+
+  const data = await res.json();
+  return data.markdown;
+}

@@ -85,14 +85,19 @@ Given the following paper, please analyze it and return a JSON object with this 
 
 IMPORTANT RULES:
 1. Identify 3-6 distinct tables (literature streams).
-2. Each table should have 2-5 key references drawn from the paper's citations.
+2. Each table should have 3-8 key references. Be COMPREHENSIVE — extract references from ALL sections:
+   - Introduction (foundational references that frame the problem)
+   - Theoretical Background / Literature Review (core theoretical papers)
+   - Discussion (papers compared to, built upon, or challenged)
+   - Conclusion (suggested future directions and related work)
 3. One table should represent the direct conversation the uploaded paper participates in.
 4. Other tables should represent adjacent but distinct debates that connect to the broad question.
 5. Make the "key_debate" vivid — frame it as an actual intellectual tension, not just a topic.
-6. The references should represent REAL papers cited in the text. Extract actual author names and titles when possible.
-7. "consensus" should describe what the papers at this table fundamentally agree on.
-8. "differences" should describe the specific disagreements, methodological divides, or conflicting evidence.
-9. Return ONLY valid JSON, no markdown code fences.
+6. The references MUST be REAL papers cited in the text. Extract EXACT author names and paper titles as they appear in the reference list.
+7. For each reference, include the EXACT year of publication.
+8. "consensus" should describe what the papers at this table fundamentally agree on.
+9. "differences" should describe the specific disagreements, methodological divides, or conflicting evidence.
+10. Return ONLY valid JSON, no markdown code fences.
 
 ---
 

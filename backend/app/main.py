@@ -23,7 +23,10 @@ from .services.paper_parser import extract_text_from_pdf
 from .services.literature_mapper import analyze_paper
 from fastapi.responses import Response
 
-from .services.dialogue_engine import chat_at_table, analyze_position, organize_transcript, organize_bilingual_summary
+from .services.dialogue_engine import (
+    chat_at_table, analyze_position, organize_transcript,
+    organize_bilingual_summary, generate_landscape_lr, generate_position_lr,
+)
 from .services.podcast_generator import generate_podcast
 
 load_dotenv()
@@ -193,6 +196,40 @@ async def generate_podcast_audio(request: TranscriptRequest):
         media_type="audio/wav",
         headers={"Content-Disposition": f'attachment; filename="{request.table_name}_podcast.wav"'},
     )
+
+
+@app.post("/api/literature-review/landscape", response_model=TranscriptResponse)
+async def lr_landscape():
+    """Generate a landscape literature review from the party analysis."""
+    if not parties:
+        raise HTTPException(status_code=400, detail="No paper analyzed yet")
+
+    party = list(parties.values())[-1]
+    api_key = _get_api_key()
+    markdown = await generate_landscape_lr(party=party, api_key=api_key)
+    return TranscriptResponse(markdown=markdown)
+
+
+class PositionLRRequest(BaseModel):
+    user_question: str
+    discussions: str = ""
+
+
+@app.post("/api/literature-review/position", response_model=TranscriptResponse)
+async def lr_position(request: PositionLRRequest):
+    """Generate a position literature review motivating the user's research question."""
+    if not parties:
+        raise HTTPException(status_code=400, detail="No paper analyzed yet")
+
+    party = list(parties.values())[-1]
+    api_key = _get_api_key()
+    markdown = await generate_position_lr(
+        party=party,
+        user_question=request.user_question,
+        discussions_text=request.discussions,
+        api_key=api_key,
+    )
+    return TranscriptResponse(markdown=markdown)
 
 
 @app.post("/api/position", response_model=PositionAnalysis)

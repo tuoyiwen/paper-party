@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PartyAnalysis, PositionAnalysis } from "../types";
-import { analyzePosition } from "../api";
+import { analyzePosition, generatePositionLR } from "../api";
+import { canUseProFeature } from "../plan";
 
 interface Props {
   party: PartyAnalysis;
@@ -15,11 +16,37 @@ const RELATIONSHIP_COLORS: Record<string, string> = {
   novel: "bg-party-gold/15 text-party-gold border-party-gold/30",
 };
 
+const CHAT_KEY_PREFIX = "paper-party-chat-";
+
+function collectDiscussions(party: PartyAnalysis): string {
+  const parts: string[] = [];
+  for (const table of party.tables) {
+    try {
+      const raw = localStorage.getItem(CHAT_KEY_PREFIX + table.id);
+      if (!raw) continue;
+      const msgs = JSON.parse(raw) as Array<{ role: string; content: string }>;
+      if (msgs.length === 0) continue;
+      parts.push(`\n**Table: ${table.name}**`);
+      for (const msg of msgs) {
+        if (msg.role === "user") {
+          parts.push(`User: ${msg.content}`);
+        } else {
+          parts.push(`${msg.role}: ${msg.content}`);
+        }
+      }
+    } catch {
+      // skip
+    }
+  }
+  return parts.join("\n");
+}
+
 export default function PositionPanel({ party, onBack, onPositionAnalyzed }: Props) {
   const [viewpoint, setViewpoint] = useState("");
   const [analysis, setAnalysis] = useState<PositionAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatingLR, setGeneratingLR] = useState(false);
 
   async function handleAnalyze() {
     if (!viewpoint.trim()) return;
@@ -37,6 +64,32 @@ export default function PositionPanel({ party, onBack, onPositionAnalyzed }: Pro
     }
   }
 
+  async function handleExportPositionLR() {
+    if (!viewpoint.trim()) return;
+    if (!canUseProFeature()) {
+      alert("Upgrade to Pro to export Literature Review");
+      return;
+    }
+    setGeneratingLR(true);
+    try {
+      const discussions = collectDiscussions(party);
+      const markdown = await generatePositionLR(viewpoint, discussions);
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "position_literature_review.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to generate literature review.");
+    } finally {
+      setGeneratingLR(false);
+    }
+  }
+
   return (
     <div>
       <button
@@ -48,8 +101,8 @@ export default function PositionPanel({ party, onBack, onPositionAnalyzed }: Pro
 
       <h2 className="mb-2 text-2xl font-bold">Find Your Position</h2>
       <p className="mb-6 text-party-muted">
-        Share your viewpoint or research idea, and we'll map where it sits in the
-        literature landscape around "{party.paper_title}".
+        Enter your research question, and we'll map where it sits in the
+        literature landscape and generate a targeted literature review.
       </p>
 
       {/* Input */}
@@ -57,17 +110,29 @@ export default function PositionPanel({ party, onBack, onPositionAnalyzed }: Pro
         <textarea
           value={viewpoint}
           onChange={(e) => setViewpoint(e.target.value)}
-          placeholder="Describe your viewpoint, research idea, or argument... (e.g., 'I believe that transformer architectures are inherently limited in their ability to capture true causal reasoning, and that hybrid neuro-symbolic approaches are necessary.')"
+          placeholder="Enter your research question or viewpoint... (e.g., 'How does AI-mediated communication affect team trust formation in remote work settings?')"
           className="w-full rounded-xl bg-party-card border border-party-accent/20 p-4 text-sm text-party-text placeholder-party-muted/40 outline-none focus:border-party-accent transition min-h-[120px] resize-y"
           disabled={loading}
         />
-        <button
-          onClick={handleAnalyze}
-          disabled={!viewpoint.trim() || loading}
-          className="mt-3 rounded-xl bg-party-accent px-6 py-3 text-sm font-medium text-white transition hover:bg-party-accent/80 disabled:opacity-30"
-        >
-          {loading ? "Analyzing your position..." : "Map My Position"}
-        </button>
+        <div className="mt-3 flex gap-3">
+          <button
+            onClick={handleAnalyze}
+            disabled={!viewpoint.trim() || loading}
+            className="rounded-xl bg-party-accent px-6 py-3 text-sm font-medium text-white transition hover:bg-party-accent/80 disabled:opacity-30"
+          >
+            {loading ? "Analyzing..." : "Map My Position"}
+          </button>
+          {analysis && (
+            <button
+              onClick={handleExportPositionLR}
+              disabled={generatingLR}
+              className="rounded-xl bg-party-gold/10 border border-party-gold/20 px-6 py-3 text-sm font-medium text-party-gold transition hover:bg-party-gold/20 disabled:opacity-40"
+            >
+              {generatingLR ? "Writing LR..." : "Export Literature Review (APA)"}
+              {!canUseProFeature() && <span className="ml-1">PRO</span>}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (

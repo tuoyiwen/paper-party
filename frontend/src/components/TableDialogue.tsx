@@ -9,14 +9,37 @@ interface Props {
   onBack: () => void;
 }
 
+const CHAT_KEY_PREFIX = "paper-party-chat-";
+
+function loadChat(tableId: string): DialogueMessage[] {
+  try {
+    const raw = localStorage.getItem(CHAT_KEY_PREFIX + tableId);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveChat(tableId: string, messages: DialogueMessage[]) {
+  localStorage.setItem(CHAT_KEY_PREFIX + tableId, JSON.stringify(messages));
+}
+
 export default function TableDialogue({ table, onBack }: Props) {
-  const [messages, setMessages] = useState<DialogueMessage[]>([]);
+  const [messages, setMessages] = useState<DialogueMessage[]>(() => loadChat(table.id));
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingBilingual, setDownloadingBilingual] = useState(false);
   const [generatingPodcast, setGeneratingPodcast] = useState(false);
+  const [showUpgradeHint, setShowUpgradeHint] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Save chat whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveChat(table.id, messages);
+    }
+  }, [messages, table.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -27,8 +50,8 @@ export default function TableDialogue({ table, onBack }: Props) {
     if (!text || loading) return;
 
     if (!canDialogue(table.id)) {
-      setMessages([
-        ...messages,
+      setMessages((prev) => [
+        ...prev,
         { role: "system", content: "You've reached the free plan limit (5 rounds per table). Upgrade to Pro for unlimited dialogue." },
       ]);
       return;
@@ -54,25 +77,39 @@ export default function TableDialogue({ table, onBack }: Props) {
     }
   }
 
+  function handleProFeature(action: () => void) {
+    if (canUseProFeature()) {
+      action();
+    } else {
+      setShowUpgradeHint(true);
+      setTimeout(() => setShowUpgradeHint(false), 3000);
+    }
+  }
+
+  function handleExportRawChat() {
+    if (messages.length === 0) return;
+    let text = `# Chat at "${table.name}"\n`;
+    text += `Topic: ${table.topic}\n\n---\n\n`;
+    for (const msg of messages) {
+      if (msg.role === "user") {
+        text += `**You:** ${msg.content}\n\n`;
+      } else if (msg.role === "system") {
+        text += `_System: ${msg.content}_\n\n`;
+      } else {
+        text += `**${msg.role}:** ${msg.content}\n\n`;
+      }
+    }
+    downloadFile(text, `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_chat.md`, "text/markdown");
+  }
+
   async function handleDownloadTranscript() {
     if (messages.length === 0 || downloading) return;
     setDownloading(true);
-
     try {
       const markdown = await generateTranscript(table.name, table.topic, messages);
-
-      // Download as .md file
-      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_transcript.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadFile(markdown, `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_transcript.md`, "text/markdown");
     } catch {
-      alert("Failed to generate transcript. Please try again.");
+      alert("Failed to generate transcript.");
     } finally {
       setDownloading(false);
     }
@@ -81,21 +118,11 @@ export default function TableDialogue({ table, onBack }: Props) {
   async function handleDownloadBilingual() {
     if (messages.length === 0 || downloadingBilingual) return;
     setDownloadingBilingual(true);
-
     try {
       const markdown = await generateBilingualSummary(table.name, table.topic, messages);
-
-      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_bilingual_summary.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadFile(markdown, `${table.name.replace(/[^a-zA-Z0-9]/g, "_")}_bilingual.md`, "text/markdown");
     } catch {
-      alert("Failed to generate bilingual summary. Please try again.");
+      alert("Failed to generate bilingual summary.");
     } finally {
       setDownloadingBilingual(false);
     }
@@ -104,10 +131,8 @@ export default function TableDialogue({ table, onBack }: Props) {
   async function handleGeneratePodcast() {
     if (messages.length === 0 || generatingPodcast) return;
     setGeneratingPodcast(true);
-
     try {
       const blob = await generatePodcast(table.name, table.topic, messages);
-
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -122,6 +147,13 @@ export default function TableDialogue({ table, onBack }: Props) {
       setGeneratingPodcast(false);
     }
   }
+
+  function handleClearChat() {
+    setMessages([]);
+    localStorage.removeItem(CHAT_KEY_PREFIX + table.id);
+  }
+
+  const remaining = getDialogueRemaining(table.id);
 
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
@@ -138,42 +170,55 @@ export default function TableDialogue({ table, onBack }: Props) {
           <p className="text-sm text-party-muted">{table.topic}</p>
         </div>
         {messages.length > 0 && (
-          <div className="flex gap-2">
-            {canUseProFeature() ? (
-              <>
-                <button
-                  onClick={handleDownloadTranscript}
-                  disabled={downloading}
-                  className="rounded-lg bg-party-accent/10 border border-party-accent/20 px-4 py-2 text-sm text-party-accent transition hover:bg-party-accent/20 disabled:opacity-40"
-                >
-                  {downloading ? "Organizing..." : "Transcript"}
-                </button>
-                <button
-                  onClick={handleDownloadBilingual}
-                  disabled={downloadingBilingual}
-                  className="rounded-lg bg-party-gold/10 border border-party-gold/20 px-4 py-2 text-sm text-party-gold transition hover:bg-party-gold/20 disabled:opacity-40"
-                >
-                  {downloadingBilingual ? "Generating..." : "Bilingual"}
-                </button>
-                <button
-                  onClick={handleGeneratePodcast}
-                  disabled={generatingPodcast}
-                  className="rounded-lg bg-party-warm/10 border border-party-warm/20 px-4 py-2 text-sm text-party-warm transition hover:bg-party-warm/20 disabled:opacity-40"
-                >
-                  {generatingPodcast ? "Recording..." : "Podcast"}
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-2 rounded-lg bg-party-gold/5 border border-party-gold/20 px-4 py-2">
-                <span className="text-xs text-party-muted">
-                  {getDialogueRemaining(table.id) < Infinity
-                    ? `${getDialogueRemaining(table.id)} rounds left`
-                    : ""}
-                </span>
-                <span className="text-xs text-party-gold">
-                  Upgrade to Pro for Transcript, Bilingual Summary & Podcast
-                </span>
-              </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap gap-2 justify-end">
+              {/* Free: raw chat export */}
+              <button
+                onClick={handleExportRawChat}
+                className="rounded-lg bg-party-card border border-party-accent/20 px-3 py-1.5 text-xs text-party-text transition hover:bg-party-card/80"
+              >
+                Export Chat
+              </button>
+              {/* Pro features */}
+              <button
+                onClick={() => handleProFeature(handleDownloadTranscript)}
+                disabled={downloading}
+                className="rounded-lg bg-party-accent/10 border border-party-accent/20 px-3 py-1.5 text-xs text-party-accent transition hover:bg-party-accent/20 disabled:opacity-40"
+              >
+                {downloading ? "..." : "AI Transcript"}
+                {!canUseProFeature() && <span className="ml-1 text-party-gold">PRO</span>}
+              </button>
+              <button
+                onClick={() => handleProFeature(handleDownloadBilingual)}
+                disabled={downloadingBilingual}
+                className="rounded-lg bg-party-gold/10 border border-party-gold/20 px-3 py-1.5 text-xs text-party-gold transition hover:bg-party-gold/20 disabled:opacity-40"
+              >
+                {downloadingBilingual ? "..." : "Bilingual"}
+                {!canUseProFeature() && <span className="ml-1">PRO</span>}
+              </button>
+              <button
+                onClick={() => handleProFeature(handleGeneratePodcast)}
+                disabled={generatingPodcast}
+                className="rounded-lg bg-party-warm/10 border border-party-warm/20 px-3 py-1.5 text-xs text-party-warm transition hover:bg-party-warm/20 disabled:opacity-40"
+              >
+                {generatingPodcast ? "..." : "Podcast"}
+                {!canUseProFeature() && <span className="ml-1 text-party-gold">PRO</span>}
+              </button>
+              <button
+                onClick={handleClearChat}
+                className="rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-1.5 text-xs text-red-400/60 transition hover:bg-red-500/10 hover:text-red-400"
+                title="Clear chat history"
+              >
+                Clear
+              </button>
+            </div>
+            {showUpgradeHint && (
+              <p className="text-xs text-party-gold animate-pulse">
+                Upgrade to Pro to use this feature
+              </p>
+            )}
+            {remaining < Infinity && (
+              <p className="text-[10px] text-party-muted">{remaining} dialogue rounds left</p>
             )}
           </div>
         )}
@@ -215,7 +260,6 @@ export default function TableDialogue({ table, onBack }: Props) {
             ))}
           </div>
 
-          {/* Consensus & Differences */}
           {table.consensus && (
             <div className="mt-4 rounded-lg bg-green-500/10 p-3">
               <p className="text-xs font-medium text-green-400">Consensus</p>
@@ -237,7 +281,6 @@ export default function TableDialogue({ table, onBack }: Props) {
 
         {/* Chat Area */}
         <div className="flex flex-1 flex-col overflow-hidden rounded-xl bg-party-card/30 border border-party-accent/10">
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
               <div className="flex h-full items-center justify-center">
@@ -294,7 +337,6 @@ export default function TableDialogue({ table, onBack }: Props) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="border-t border-party-accent/10 p-4">
             <form
               onSubmit={(e) => {
@@ -324,4 +366,16 @@ export default function TableDialogue({ table, onBack }: Props) {
       </div>
     </div>
   );
+}
+
+function downloadFile(content: string, filename: string, type: string) {
+  const blob = new Blob([content], { type: `${type};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

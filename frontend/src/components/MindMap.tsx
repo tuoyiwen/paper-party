@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { PartyAnalysis, PositionAnalysis } from "../types";
+import { generateLandscapeLR } from "../api";
+import { canUseProFeature } from "../plan";
 
 interface Props {
   party: PartyAnalysis;
@@ -28,19 +31,56 @@ const RELATIONSHIP_COLORS: Record<string, string> = {
 };
 
 export default function MindMap({ party, position, onBack }: Props) {
+  const [generatingLR, setGeneratingLR] = useState(false);
+
+  async function handleExportLR() {
+    if (!canUseProFeature()) {
+      alert("Upgrade to Pro to export Literature Review");
+      return;
+    }
+    setGeneratingLR(true);
+    try {
+      const markdown = await generateLandscapeLR();
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "landscape_literature_review.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to generate literature review.");
+    } finally {
+      setGeneratingLR(false);
+    }
+  }
+
   return (
     <div>
-      <button
-        onClick={onBack}
-        className="mb-6 text-sm text-party-muted hover:text-party-accent transition"
-      >
-        ← Back to party
-      </button>
-
-      <h2 className="text-2xl font-bold mb-2">Literature Mind Map</h2>
-      <p className="text-sm text-party-muted mb-8">
-        Visual overview of the research landscape
-      </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <button
+            onClick={onBack}
+            className="mb-2 text-sm text-party-muted hover:text-party-accent transition"
+          >
+            ← Back to party
+          </button>
+          <h2 className="text-2xl font-bold mb-2">Literature Mind Map</h2>
+          <p className="text-sm text-party-muted">
+            Visual overview of the research landscape
+          </p>
+        </div>
+        <button
+          onClick={handleExportLR}
+          disabled={generatingLR}
+          className="rounded-lg bg-party-accent/10 border border-party-accent/20 px-4 py-2 text-sm text-party-accent transition hover:bg-party-accent/20 disabled:opacity-40"
+        >
+          {generatingLR ? "Generating..." : "Export Literature Review (APA)"}
+          {!canUseProFeature() && <span className="ml-1 text-party-gold">PRO</span>}
+        </button>
+      </div>
 
       {/* Center: Party Theme */}
       <div className="flex justify-center mb-8">

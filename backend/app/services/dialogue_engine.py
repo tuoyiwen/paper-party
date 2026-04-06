@@ -330,3 +330,115 @@ async def organize_bilingual_summary(
     )
 
     return response.content[0].text
+
+
+LANDSCAPE_LR_PROMPT = """You are an academic writing assistant. Generate a Literature Review section based on the following research landscape analysis.
+
+Party Theme (Broad Research Question): {broad_question}
+
+Tables (Literature Streams):
+{tables_description}
+
+Write a well-structured literature review in academic style that:
+1. Opens with the broad research question and why it matters
+2. Organizes by the discussion tables/themes (each table = a subsection)
+3. For each table, synthesizes the consensus, differences, and key debates
+4. References all papers using APA 7th edition format: Author(s) (Year)
+5. Shows how the different streams connect to each other
+6. Concludes with identified gaps in the literature
+
+Use proper academic tone. ALL citations must be in APA format.
+Respond in the SAME LANGUAGE as the party theme.
+"""
+
+POSITION_LR_PROMPT = """You are an academic writing assistant. A researcher wants a literature review that motivates their specific research question.
+
+Broad Research Theme: {broad_question}
+
+The researcher's research question: "{user_question}"
+
+Literature Landscape:
+{tables_description}
+
+User's discussions at various tables:
+{discussions}
+
+Write a focused literature review that:
+1. Opens by introducing the broad field
+2. Strategically organizes the literature to BUILD TOWARD the researcher's specific question
+3. Each section should progressively narrow toward the gap that the researcher's question addresses
+4. Explicitly highlight what is MISSING in the current literature that the researcher's question would fill
+5. End with a clear statement of the research gap and why the researcher's question is important
+6. ALL citations must be in APA 7th edition format: Author(s) (Year)
+7. Use the insights from the researcher's discussions to inform the narrative
+
+Use proper academic tone. This should read like a real journal paper's literature review.
+Respond in the SAME LANGUAGE as the user's research question.
+"""
+
+
+def _build_tables_description_for_lr(party: PartyAnalysis) -> str:
+    parts = []
+    for table in party.tables:
+        refs_str = ""
+        for ref in table.references:
+            authors = ref.authors_full or ref.authors
+            year = ref.year or "n.d."
+            refs_str += f"  - {authors} ({year}). {ref.title}."
+            if ref.journal:
+                refs_str += f" {ref.journal}."
+            refs_str += f" Stance: {ref.stance}. {ref.summary}\n"
+
+        parts.append(
+            f"### {table.name}\n"
+            f"Topic: {table.topic}\n"
+            f"Key Debate: {table.key_debate}\n"
+            f"Consensus: {table.consensus or 'N/A'}\n"
+            f"Differences: {table.differences or 'N/A'}\n"
+            f"References:\n{refs_str}"
+        )
+    return "\n\n".join(parts)
+
+
+async def generate_landscape_lr(
+    party: PartyAnalysis,
+    api_key: str,
+) -> str:
+    """Generate a landscape-style literature review from the party analysis."""
+    prompt = LANDSCAPE_LR_PROMPT.format(
+        broad_question=party.broad_question.question,
+        tables_description=_build_tables_description_for_lr(party),
+    )
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    return response.content[0].text
+
+
+async def generate_position_lr(
+    party: PartyAnalysis,
+    user_question: str,
+    discussions_text: str,
+    api_key: str,
+) -> str:
+    """Generate a position-style literature review motivating user's research question."""
+    prompt = POSITION_LR_PROMPT.format(
+        broad_question=party.broad_question.question,
+        user_question=user_question,
+        tables_description=_build_tables_description_for_lr(party),
+        discussions=discussions_text or "No discussions yet.",
+    )
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    return response.content[0].text
