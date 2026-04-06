@@ -5,7 +5,9 @@ import type {
   PositionAnalysis,
 } from "./types";
 
-const BASE = "/api";
+const BASE = import.meta.env.PROD
+  ? "https://paper-party-production.up.railway.app/api"
+  : "/api";
 
 export async function uploadPaper(file: File): Promise<PartyAnalysis> {
   const formData = new FormData();
