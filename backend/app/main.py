@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from pathlib import Path
 
@@ -30,6 +31,7 @@ from .services.dialogue_engine import (
     organize_bilingual_summary, generate_landscape_lr, generate_position_lr,
 )
 from .services.podcast_generator import generate_podcast
+from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
 
 load_dotenv()
 
@@ -276,3 +278,56 @@ async def analyze_my_position(request: PositionRequest):
     )
 
     return result
+
+
+def _extract_video_id(url: str) -> str | None:
+    """Extract YouTube video ID from various URL formats."""
+    patterns = [
+        r"(?:v=|youtu\.be/|embed/|shorts/)([A-Za-z0-9_-]{11})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+
+class YoutubeTranscriptRequest(BaseModel):
+    url: str
+    languages: list[str] = ["en"]
+
+
+class YoutubeTranscriptResponse(BaseModel):
+    video_id: str
+    language: str
+    text: str
+
+
+@app.post("/api/youtube/transcript", response_model=YoutubeTranscriptResponse)
+async def get_youtube_transcript(request: YoutubeTranscriptRequest):
+    """Download and return the transcript for a YouTube video."""
+    video_id = _extract_video_id(request.url)
+    if not video_id:
+        raise HTTPException(status_code=400, detail="Could not extract video ID from URL")
+
+    try:
+        ytt = YouTubeTranscriptApi()
+        transcript_list = ytt.list(video_id)
+        try:
+            transcript = transcript_list.find_transcript(request.languages)
+        except NoTranscriptFound:
+            transcript = transcript_list.find_generated_transcript(request.languages)
+
+        data = transcript.fetch()
+        full_text = " ".join(entry.text for entry in data)
+        return YoutubeTranscriptResponse(
+            video_id=video_id,
+            language=transcript.language_code,
+            text=full_text,
+        )
+    except TranscriptsDisabled:
+        raise HTTPException(status_code=400, detail="Transcripts are disabled for this video")
+    except NoTranscriptFound:
+        raise HTTPException(status_code=404, detail=f"No transcript found in languages: {request.languages}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
