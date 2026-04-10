@@ -34,15 +34,17 @@ Effective literature review is not about piling up papers — it's about underst
 - 🧠 **Mind Map** — Visual overview of the research landscape
 - 📝 **Literature Review Export** — APA-formatted landscape LR and position LR
 - 🌐 **Bilingual Summary** — English/Chinese dual-language discussion report
-- 🎙️ **Podcast Export** — Convert discussions to audio with different voices per speaker
+- 🎙️ **Podcast Export** — Convert discussions to audio with different voices per speaker *(coming soon)*
 - 📊 **AI Transcript** — AI-organized discussion summary
 - 📚 **Browsing History** — Re-enter previous parties without re-uploading
 
 ## Who Is This For?
 
-**Researchers** — Turn the overwhelming process of literature review into a structured conversation. See the big picture, find your niche, and generate a draft LR in minutes.
+**Researchers** — Turn the overwhelming process of literature review into a structured conversation. Upload an academic paper that contains literature citations, and Paper Party will map the conversations happening across those references. See the big picture, find your niche, and generate a draft LR in minutes.
 
-**Content Creators** — Map the key debates and perspectives in any field. Get the narrative structure of a topic, ready to turn into educational content, podcasts, or newsletters.
+**Content Creators** — Paper Party can provide insights for those who create educational content, podcasts, or newsletters about research trends. By uploading a review or research paper, you can quickly map the key debates and different perspectives in a field, giving you the narrative structure of a topic.
+
+> **Note:** Paper Party works best with academic papers (PDFs) that contain literature citations — e.g., journal articles, conference papers, or review papers. The AI relies on the references within the paper to discover and organize the discussion tables.
 
 ## Live Demo
 
