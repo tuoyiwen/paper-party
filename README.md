@@ -28,21 +28,15 @@ Effective literature review is not about piling up papers — it's about underst
 
 ## Features
 
-### Core (Free)
-- Upload and analyze research papers (PDF)
-- Party Overview — see all discussion tables, consensus, and differences
-- Join tables and dialogue with the literature
-- Export raw chat history
-- Browsing history with re-entry
-
-### Pro
-- **AI Transcript** — AI-organized discussion summary
-- **Bilingual Summary** — English/Chinese dual-language report
-- **Podcast Export** — Convert discussions to audio with different voices per speaker
-- **Mind Map** — Visual overview of the literature landscape
-- **Position Analysis** — Map your research question in the literature
-- **Literature Review Export** — APA-formatted landscape LR and position LR
-- Unlimited uploads and dialogue rounds
+- 🔍 **Party Overview** — See all discussion tables, consensus, and differences at a glance
+- 💬 **Multi-paper Dialogue** — Chat with literature as if you're sitting at a table with the authors
+- 📍 **Position Analysis** — Map your research question in the existing literature landscape
+- 🧠 **Mind Map** — Visual overview of the research landscape
+- 📝 **Literature Review Export** — APA-formatted landscape LR and position LR
+- 🌐 **Bilingual Summary** — English/Chinese dual-language discussion report
+- 🎙️ **Podcast Export** — Convert discussions to audio with different voices per speaker
+- 📊 **AI Transcript** — AI-organized discussion summary
+- 📚 **Browsing History** — Re-enter previous parties without re-uploading
 
 ## Who Is This For?
 
@@ -62,14 +56,16 @@ Effective literature review is not about piling up papers — it's about underst
 - **Data Enrichment**: Semantic Scholar API
 - **Deployment**: Vercel (frontend) + Railway (backend)
 
-## Getting Started (Local Development)
+## Local Development
+
+> This section is for developers who want to run Paper Party locally.
 
 ### Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env  # Add your API keys
+cp .env.example .env  # Configure your API keys
 python -m uvicorn app.main:app
 ```
 
@@ -83,11 +79,11 @@ npm run dev
 
 The frontend dev server proxies `/api` requests to `localhost:8000`.
 
-## Environment Variables
+### Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Claude API key |
+| `ANTHROPIC_API_KEY` | Yes | Claude API key for paper analysis and dialogue |
 | `S2_API_KEY` | Optional | Semantic Scholar API key for paper enrichment |
 | `OPENAI_API_KEY` | Optional | OpenAI API key for podcast TTS |
 
