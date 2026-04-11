@@ -34,8 +34,20 @@ from .services.podcast_generator import generate_podcast
 
 load_dotenv()
 
-BUILD_MARKER = "paper-party build=openrouter-qwen-2"
+BUILD_MARKER = "paper-party build=openrouter-qwen-3"
 print(f"[STARTUP] {BUILD_MARKER}")
+
+# Audit which of the env vars we care about are actually visible to this
+# process. We deliberately do NOT print any values, only names + lengths, so
+# it's safe to leave in logs.
+_expected = ["OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "S2_API_KEY", "OPENROUTER_MODEL"]
+for _name in _expected:
+    _val = os.getenv(_name)
+    if _val is None:
+        print(f"[STARTUP] env {_name}=<missing>")
+    else:
+        print(f"[STARTUP] env {_name}=<set, length={len(_val)}>")
+print(f"[STARTUP] total env vars in process: {len(os.environ)}")
 
 app = FastAPI(
     title="Paper Party",
