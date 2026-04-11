@@ -44,7 +44,72 @@ def _extract_json(text: str) -> dict:
                     except json.JSONDecodeError:
                         break
 
-    raise ValueError(f"Could not extract valid JSON from response: {text[:200]}...")
+    # Last resort: if the output was truncated mid-JSON, the response will
+    # end without matching braces/brackets. Try to repair by appending
+    # enough closing characters to balance what's been opened.
+    if start != -1:
+        repaired = _try_repair_truncated_json(text[start:])
+        if repaired is not None:
+            return repaired
+
+    # Diagnostic: log how long the response was and both ends so we can tell
+    # truncation from malformed-from-the-start.
+    total = len(text)
+    head = text[:300].replace("\n", "\\n")
+    tail = text[-300:].replace("\n", "\\n") if total > 300 else ""
+    print(
+        f"[ERROR] _extract_json failed. total_len={total}, head={head!r}, tail={tail!r}"
+    )
+    raise ValueError(
+        f"Could not extract valid JSON from response (total length={total}). "
+        f"Response head: {text[:200]}..."
+    )
+
+
+def _try_repair_truncated_json(text: str) -> dict | None:
+    """Attempt to recover a truncated JSON object by closing open brackets.
+
+    Scans char-by-char tracking string/brace/bracket state, then appends
+    closing characters for anything left open at EOF.
+    """
+    stack: list[str] = []
+    in_string = False
+    escape = False
+
+    for ch in text:
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            stack.append("}")
+        elif ch == "[":
+            stack.append("]")
+        elif ch in "}]":
+            if stack and stack[-1] == ch:
+                stack.pop()
+
+    # Build candidate: strip incomplete trailing token, then close brackets
+    candidate = text
+    # If we're mid-string, close the string first
+    if in_string:
+        candidate += '"'
+    # Drop trailing comma or colon that would make JSON invalid
+    candidate = candidate.rstrip(" \t\n\r,:")
+    # Close remaining open brackets/braces in reverse order
+    while stack:
+        candidate += stack.pop()
+
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        return None
 
 ANALYSIS_PROMPT = """You are an expert academic research analyst. You are helping a researcher understand the "conversation" happening in the academic literature around a paper they uploaded.
 
@@ -130,7 +195,8 @@ async def analyze_paper(
     response_text = await chat_completion(
         messages=[{"role": "user", "content": prompt}],
         api_key=api_key,
-        max_tokens=4096,
+        max_tokens=8192,
+        json_mode=True,
     )
 
     # Parse JSON from response — handle markdown fences and extra text
