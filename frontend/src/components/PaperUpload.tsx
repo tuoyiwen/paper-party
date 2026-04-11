@@ -32,7 +32,7 @@ export default function PaperUpload({ onAnalyzed, history, onOpenHistory }: Prop
     }
 
     if (!canUpload()) {
-      setError(`You've reached the free plan limit (3 papers/month). Upgrade to Pro for unlimited uploads.`);
+      setError(`You've reached the free plan limit (3 papers/month). Upgrade to Pro for unlimited uploads, or come back next month.`);
       return;
     }
 

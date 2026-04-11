@@ -10,7 +10,7 @@ const USAGE_KEY = "paper-party-usage";
 const PACK_KEY = "paper-party-pack-credits";
 
 // Limits
-const FREE_UPLOADS_PER_MONTH = 1;
+const FREE_UPLOADS_PER_MONTH = 3;
 const FREE_DIALOGUE_ROUNDS = 3;
 const PACK_PAPERS = 5;
 
