@@ -76,9 +76,10 @@ _load_parties()
 
 
 def _get_api_key() -> str:
-    key = os.getenv("ANTHROPIC_API_KEY", "")
+    # Accept OPENROUTER_API_KEY (preferred) or legacy ANTHROPIC_API_KEY env var
+    key = os.getenv("OPENROUTER_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or ""
     if not key:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
     return key
 
 
@@ -214,7 +215,7 @@ async def generate_podcast_audio(request: TranscriptRequest):
         table_name=request.table_name,
         table_topic=request.table_topic,
         messages=request.messages,
-        anthropic_api_key=api_key,
+        llm_api_key=api_key,
         openai_api_key=openai_key,
     )
 

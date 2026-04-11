@@ -54,7 +54,7 @@ Effective literature review is not about piling up papers — it's about underst
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
 - **Backend**: Python, FastAPI, pdfplumber
-- **AI**: Claude API (paper analysis, dialogue, LR generation)
+- **AI**: OpenRouter (Qwen3.6-plus by default — swappable via `OPENROUTER_MODEL`)
 - **Data Enrichment**: Semantic Scholar API
 - **Deployment**: Vercel (frontend) + Railway (backend)
 
@@ -85,7 +85,8 @@ The frontend dev server proxies `/api` requests to `localhost:8000`.
 
 | Variable | Required | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Claude API key for paper analysis and dialogue |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key for paper analysis and dialogue |
+| `OPENROUTER_MODEL` | Optional | Override default model (`qwen/qwen3.6-plus`) |
 | `S2_API_KEY` | Optional | Semantic Scholar API key for paper enrichment |
 | `OPENAI_API_KEY` | Optional | OpenAI API key for podcast TTS |
 

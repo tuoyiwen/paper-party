@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import anthropic
 import httpx
 import io
-import struct
 import wave
 
 from ..models import DialogueMessage
+from .llm_client import chat_completion
 
 
 # Voice assignments for different speakers
@@ -79,7 +78,7 @@ async def generate_podcast(
     table_name: str,
     table_topic: str,
     messages: list[DialogueMessage],
-    anthropic_api_key: str,
+    llm_api_key: str,
     openai_api_key: str,
 ) -> bytes:
     """Generate a podcast-style audio from a table discussion.
@@ -114,14 +113,11 @@ CONVERSATION:
 
 Return ONLY the script, no other text."""
 
-    client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1500,
+    script = await chat_completion(
         messages=[{"role": "user", "content": script_prompt}],
+        api_key=llm_api_key,
+        max_tokens=1500,
     )
-
-    script = response.content[0].text
 
     # Step 2: Parse script into segments
     segments: list[tuple[str, str]] = []

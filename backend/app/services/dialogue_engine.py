@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import anthropic
-
 from ..models import (
     DialogueMessage,
     DialogueResponse,
@@ -12,6 +10,7 @@ from ..models import (
     PartyAnalysis,
     Table,
 )
+from .llm_client import chat_completion
 import json
 import re
 
@@ -144,15 +143,12 @@ async def chat_at_table(
 
     messages.append({"role": "user", "content": user_message})
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2048,
-        system=system_prompt,
+    response_text = await chat_completion(
         messages=messages,
+        api_key=api_key,
+        system=system_prompt,
+        max_tokens=2048,
     )
-
-    response_text = response.content[0].text
 
     # Parse multi-speaker response into individual messages
     dialogue_messages = _parse_multi_speaker_response(response_text)
@@ -216,14 +212,13 @@ async def analyze_position(
         user_viewpoint=user_viewpoint,
     )
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2048,
+    response_text = await chat_completion(
         messages=[{"role": "user", "content": prompt}],
+        api_key=api_key,
+        max_tokens=2048,
     )
 
-    data = _extract_json(response.content[0].text)
+    data = _extract_json(response_text)
 
     return PositionAnalysis(
         position_summary=data["position_summary"],
@@ -274,14 +269,11 @@ async def organize_transcript(
         conversation=conversation,
     )
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=3000,
+    return await chat_completion(
         messages=[{"role": "user", "content": prompt}],
+        api_key=api_key,
+        max_tokens=3000,
     )
-
-    return response.content[0].text
 
 
 BILINGUAL_PROMPT = """You are organizing a scholarly discussion transcript into a bilingual (English + Chinese) summary report.
@@ -355,14 +347,11 @@ async def organize_bilingual_summary(
         conversation=conversation,
     )
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4000,
+    return await chat_completion(
         messages=[{"role": "user", "content": prompt}],
+        api_key=api_key,
+        max_tokens=4000,
     )
-
-    return response.content[0].text
 
 
 LANDSCAPE_LR_PROMPT = """You are an academic writing assistant. Generate a Literature Review section based on the following research landscape analysis.
@@ -443,14 +432,11 @@ async def generate_landscape_lr(
         tables_description=_build_tables_description_for_lr(party),
     )
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4000,
+    return await chat_completion(
         messages=[{"role": "user", "content": prompt}],
+        api_key=api_key,
+        max_tokens=4000,
     )
-
-    return response.content[0].text
 
 
 async def generate_position_lr(
@@ -467,11 +453,8 @@ async def generate_position_lr(
         discussions=discussions_text or "No discussions yet.",
     )
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4000,
+    return await chat_completion(
         messages=[{"role": "user", "content": prompt}],
+        api_key=api_key,
+        max_tokens=4000,
     )
-
-    return response.content[0].text

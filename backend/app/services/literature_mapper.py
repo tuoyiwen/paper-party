@@ -6,9 +6,8 @@ import json
 import re
 import uuid
 
-import anthropic
-
 from ..models import LiteratureReference, PartyAnalysis, ResearchQuestion, Table
+from .llm_client import chat_completion
 from .semantic_scholar import enrich_references, search_top_tier_papers
 
 
@@ -128,14 +127,11 @@ async def analyze_paper(
         full_text=truncated_text,
     )
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
-    message = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
+    response_text = await chat_completion(
         messages=[{"role": "user", "content": prompt}],
+        api_key=api_key,
+        max_tokens=4096,
     )
-
-    response_text = message.content[0].text
 
     # Parse JSON from response — handle markdown fences and extra text
     data = _extract_json(response_text)
