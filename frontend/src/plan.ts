@@ -1,6 +1,10 @@
 /**
- * Plan management using localStorage.
- * In production, this would be backed by a real auth/billing system (e.g. Stripe + Supabase).
+ * Plan management — TEMPORARILY DISABLED.
+ *
+ * All gating checks below now return true / Infinity so every user gets
+ * unlimited access while we're still iterating on the product. The real
+ * limits are preserved as constants at the top so we can flip this back on
+ * later by reverting the guards.
  */
 
 export type Plan = "free" | "paper_pack" | "pro";
@@ -9,7 +13,7 @@ const PLAN_KEY = "paper-party-plan";
 const USAGE_KEY = "paper-party-usage";
 const PACK_KEY = "paper-party-pack-credits";
 
-// Limits
+// Limits (unused while gating is disabled — kept for when we re-enable)
 const FREE_UPLOADS_PER_MONTH = 3;
 const FREE_DIALOGUE_ROUNDS = 3;
 const PACK_PAPERS = 5;
@@ -25,7 +29,6 @@ function currentMonth(): string {
 }
 
 export function getPlan(): Plan {
-  // Default to "pro" during testing; change to "free" for production
   return (localStorage.getItem(PLAN_KEY) as Plan) || "pro";
 }
 
@@ -47,13 +50,6 @@ export function addPackCredits(count: number = PACK_PAPERS) {
   localStorage.setItem(PACK_KEY, String(current + count));
 }
 
-function usePackCredit() {
-  const current = getPackCredits();
-  if (current > 0) {
-    localStorage.setItem(PACK_KEY, String(current - 1));
-  }
-}
-
 function getUsage(): Usage {
   try {
     const raw = localStorage.getItem(USAGE_KEY);
@@ -72,38 +68,26 @@ function saveUsage(usage: Usage) {
 }
 
 export function recordUpload() {
-  const plan = getPlan();
-  if (plan === "paper_pack") {
-    usePackCredit();
-  }
+  // Still track usage counts for analytics, but don't block on them.
   const usage = getUsage();
   usage.uploads_this_month += 1;
   saveUsage(usage);
 }
 
+// ---- Gating (temporarily disabled — always allow) ----
+
 export function canUpload(): boolean {
-  const plan = getPlan();
-  if (plan === "pro") return true;
-  if (plan === "paper_pack") return getPackCredits() > 0;
-  // Free
-  const usage = getUsage();
-  return usage.uploads_this_month < FREE_UPLOADS_PER_MONTH;
+  return true;
 }
 
 export function getUploadsRemaining(): number {
-  const plan = getPlan();
-  if (plan === "pro") return Infinity;
-  if (plan === "paper_pack") return getPackCredits();
-  const usage = getUsage();
-  return Math.max(0, FREE_UPLOADS_PER_MONTH - usage.uploads_this_month);
+  return Infinity;
 }
 
 export function canUseProFeature(): boolean {
-  const plan = getPlan();
-  return plan === "pro" || plan === "paper_pack";
+  return true;
 }
 
-// Dialogue round limits
 const DIALOGUE_KEY_PREFIX = "paper-party-dialogue-";
 
 export function getDialogueRounds(tableId: string): number {
@@ -119,14 +103,14 @@ export function recordDialogueRound(tableId: string) {
   localStorage.setItem(DIALOGUE_KEY_PREFIX + tableId, String(rounds));
 }
 
-export function canDialogue(tableId: string): boolean {
-  const plan = getPlan();
-  if (plan === "pro" || plan === "paper_pack") return true;
-  return getDialogueRounds(tableId) < FREE_DIALOGUE_ROUNDS;
+export function canDialogue(_tableId: string): boolean {
+  return true;
 }
 
-export function getDialogueRemaining(tableId: string): number {
-  const plan = getPlan();
-  if (plan === "pro" || plan === "paper_pack") return Infinity;
-  return Math.max(0, FREE_DIALOGUE_ROUNDS - getDialogueRounds(tableId));
+export function getDialogueRemaining(_tableId: string): number {
+  return Infinity;
 }
+
+// Silence unused-constant warnings while gating is disabled.
+void FREE_UPLOADS_PER_MONTH;
+void FREE_DIALOGUE_ROUNDS;

@@ -6,10 +6,9 @@ import TableDialogue from "./components/TableDialogue";
 import PositionPanel from "./components/PositionPanel";
 import History from "./components/History";
 import MindMap from "./components/MindMap";
-import Pricing from "./components/Pricing";
-import { getPlan, setPlan, addPackCredits, recordUpload, type Plan } from "./plan";
+import { recordUpload } from "./plan";
 
-type View = "upload" | "party" | "table" | "position" | "history" | "mindmap" | "pricing";
+type View = "upload" | "party" | "table" | "position" | "history" | "mindmap";
 
 interface HistoryEntry {
   id: string;
@@ -57,7 +56,6 @@ export default function App() {
   const [activeTable, setActiveTable] = useState<Table | null>(null);
   const [positionResult, setPositionResult] = useState<PositionAnalysis | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [plan, setPlanState] = useState<Plan>(getPlan());
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -69,24 +67,6 @@ export default function App() {
     recordUpload();
     const updated = addToHistory(p);
     setHistory(updated);
-  }
-
-  function handleSelectPlan(newPlan: Plan) {
-    // In production: redirect to Stripe checkout
-    // For now: simulate purchase
-    if (newPlan === "paper_pack") {
-      addPackCredits(3);
-      setPlan("paper_pack");
-      setPlanState("paper_pack");
-    } else {
-      setPlan(newPlan);
-      setPlanState(newPlan);
-    }
-    if (party) {
-      setView("party");
-    } else {
-      setView("upload");
-    }
   }
 
   function handleJoinTable(table: Table) {
@@ -175,18 +155,6 @@ export default function App() {
                   History
                 </button>
                 <button
-                  onClick={() => setView("pricing")}
-                  className={`rounded-lg px-3 py-1.5 text-sm transition ${
-                    plan === "pro"
-                      ? "text-party-gold hover:text-party-gold/80"
-                      : plan === "paper_pack"
-                        ? "text-blue-400 hover:text-blue-300"
-                        : "bg-party-gold/10 text-party-gold hover:bg-party-gold/20"
-                  }`}
-                >
-                  {plan === "pro" ? "Pro" : plan === "paper_pack" ? "Paper Pack" : "Upgrade"}
-                </button>
-                <button
                   onClick={() => {
                     setParty(null);
                     setActiveTable(null);
@@ -226,9 +194,6 @@ export default function App() {
         )}
         {view === "mindmap" && party && (
           <MindMap party={party} position={positionResult} onBack={handleBackToParty} />
-        )}
-        {view === "pricing" && (
-          <Pricing currentPlan={plan} onSelectPlan={handleSelectPlan} onBack={handleBackToParty} />
         )}
         {view === "position" && party && (
           <PositionPanel party={party} onBack={handleBackToParty} onPositionAnalyzed={setPositionResult} />
