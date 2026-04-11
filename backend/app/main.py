@@ -93,10 +93,17 @@ _load_parties()
 
 
 def _get_api_key() -> str:
-    # Accept OPENROUTER_API_KEY (preferred) or legacy ANTHROPIC_API_KEY env var
-    key = os.getenv("OPENROUTER_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or ""
+    key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
     if not key:
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+        raise HTTPException(
+            status_code=500,
+            detail="OPENROUTER_API_KEY is not set on the server. Add it in Railway → backend service → Variables.",
+        )
+    if not key.startswith("sk-or-"):
+        raise HTTPException(
+            status_code=500,
+            detail=f"OPENROUTER_API_KEY looks wrong (should start with 'sk-or-', got prefix '{key[:6]}...'). Check the Railway Variables tab.",
+        )
     return key
 
 
