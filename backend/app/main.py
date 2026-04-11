@@ -34,10 +34,13 @@ from .services.podcast_generator import generate_podcast
 
 load_dotenv()
 
+BUILD_MARKER = "paper-party build=openrouter-qwen-2"
+print(f"[STARTUP] {BUILD_MARKER}")
+
 app = FastAPI(
     title="Paper Party",
     description="Upload a paper. Discover the conversations. Join the table.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
