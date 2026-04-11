@@ -50,6 +50,13 @@ async def chat_completion(
                 "max_tokens": max_tokens,
             },
         )
-        response.raise_for_status()
+        if response.status_code != 200:
+            # Surface OpenRouter's error body so the frontend / logs tell us
+            # exactly what's wrong (bad key, wrong model id, rate limit, etc).
+            raise RuntimeError(
+                f"OpenRouter returned {response.status_code}: {response.text[:500]}"
+            )
         data = response.json()
+        if "choices" not in data or not data["choices"]:
+            raise RuntimeError(f"OpenRouter returned unexpected payload: {str(data)[:500]}")
         return data["choices"][0]["message"]["content"]

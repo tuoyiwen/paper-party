@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi import FastAPI, Request, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 
 from pydantic import BaseModel
 
@@ -23,7 +25,6 @@ from .models import (
 )
 from .services.paper_parser import extract_text_from_pdf
 from .services.literature_mapper import analyze_paper
-from fastapi.responses import Response
 
 from .services.dialogue_engine import (
     chat_at_table, analyze_position, organize_transcript,
@@ -45,7 +46,23 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+# Global exception handler so that any unhandled error still comes back as a
+# proper JSONResponse (with CORS headers attached by the middleware), rather
+# than a raw 500 that the browser sees as a CORS failure. Without this, the
+# real error message is invisible to the frontend.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    print(f"[ERROR] {request.method} {request.url.path}: {type(exc).__name__}: {exc}")
+    print(tb)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"{type(exc).__name__}: {str(exc)}"},
+    )
 
 # File-based persistence for party data
 DATA_DIR = Path(__file__).parent.parent / "data"
