@@ -133,8 +133,19 @@ async def upload_paper(file: UploadFile):
     if len(pdf_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty file")
 
-    # Parse PDF
-    parsed = extract_text_from_pdf(pdf_bytes)
+    # Parse PDF — return a friendly 400 if the file isn't a valid PDF,
+    # rather than letting pdfplumber's PDFSyntaxError bubble up as a 500.
+    try:
+        parsed = extract_text_from_pdf(pdf_bytes)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Could not read this PDF: {exc}. "
+                "Make sure the file is a real, unencrypted PDF "
+                "(e.g. a paper downloaded from arXiv or a journal website)."
+            ),
+        )
 
     # Analyze with Claude + enrich with Semantic Scholar
     api_key = _get_api_key()
